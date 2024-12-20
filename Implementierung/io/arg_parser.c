@@ -66,8 +66,8 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
                                         // and there are three floating point arguments
                     }
                     char* endptr;
-                    args->coeffs[0] = strtod(argv[optind - 1], &endptr);   //because when counting in an array,
-                                                                                // we start by 0 as index
+                    // because when counting in an array, we start by 0 as index
+                    args->coeffs[0] = strtod(argv[optind - 1], &endptr);
                     args->coeffs[1] = strtod(argv[optind], &endptr);
                     args->coeffs[2] = strtod(argv[optind + 1], &endptr);
                     optind += 2; // Advance past extra arguments

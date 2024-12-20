@@ -5,11 +5,14 @@
 # entry point for the program and target name
 MAIN := main.c
 
-# assignment task file
-ASSIGNMENT := readwrite.c sobel.c arg_parser.c grayscale.c
+# assignment task file TODO: make this find the files automatically
+ASSIGNMENT := 	conversion/sobel.c
+				conversion/grayscale.c
+				io/arg_parser.c
+				io/readwrite.c
 
 # Additional flags for the compiler
-CFLAGS := -Wall -Wextra
+CFLAGS := -Wall -Wextra -std=c17
 
 # ---------------------------------------
 # CONFIGURATION END

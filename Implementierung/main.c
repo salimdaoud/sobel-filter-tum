@@ -2,9 +2,9 @@
 #include <stdlib.h>
 
 
-#include "readwrite.h"
-#include "sobel.h"
-#include "arg_parser.h"
+#include "io/readwrite.h"
+#include "conversion/sobel.h"
+#include "io/arg_parser.h"
 
 
 
