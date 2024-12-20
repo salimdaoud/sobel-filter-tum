@@ -6,9 +6,9 @@
 MAIN := main.c
 
 # assignment task file TODO: make this find the files automatically
-ASSIGNMENT := 	conversion/sobel.c
-				conversion/grayscale.c
-				io/arg_parser.c
+ASSIGNMENT := 	conversion/sobel.c \
+				conversion/grayscale.c \
+				io/arg_parser.c \
 				io/readwrite.c
 
 # Additional flags for the compiler
