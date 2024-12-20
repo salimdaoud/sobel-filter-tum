@@ -1,28 +1,47 @@
-# Compiler and flags
-CC = gcc
-CFLAGS = -Wall -Wextra -std=c17
+# ---------------------------------------
+# CONFIGURATION BEGIN
+# ---------------------------------------
 
-# Target executable
-TARGET = my_program
+# entry point for the program and target name
+MAIN := main.c
 
-# Source and object files
-SRCS = io.c main.c arg_parser.c
-OBJS = $(SRCS:.c=.o) #(formel: $(VAR:pattern=replacement))
+# assignment task file
+ASSIGNMENT := readwrite.c sobel.c arg_parser.c grayscale.c
 
-# Default target
-all: $(TARGET)
+# Additional flags for the compiler
+CFLAGS := -Wall -Wextra
 
-# Rule to build the executable
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) -lm
+# ---------------------------------------
+# CONFIGURATION END
+# ---------------------------------------
 
-# Rule to build object files
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+# Determine if clang or gcc is available
+CC := $(shell command -v gcc || command -v clang)
+ifeq ($(strip $(CC)),)
+    $(error Neither clang nor gcc is available. Exiting.)
+endif
 
-# Clean target
+# all source files needed for the program
+SOURCES := $(MAIN) $(ASSIGNMENT)
+TARGET := $(basename $(MAIN))
+
+# Default to release build for both app and library
+all: debug
+
+# Debug build
+debug: CFLAGS += -g
+debug: $(TARGET)
+
+# Release build
+release: CFLAGS += -O2
+release: $(TARGET)
+
+# recipe for building the program
+$(TARGET): $(SOURCES)
+	$(CC) $(CFLAGS) -o $@ $(SOURCES)  -lm
+
+# clean up
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(TARGET)
 
-# Phony targets
-.PHONY: all clean
+.PHONY: all debug release clean
