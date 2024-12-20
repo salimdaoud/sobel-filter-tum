@@ -6,7 +6,7 @@ CFLAGS = -Wall -Wextra -std=c99
 TARGET = my_program
 
 # Source and object files
-SRCS = io.c main.c arg_parser.c
+SRCS = io.c main.c arg_parser.c grayscale.c 
 OBJS = $(SRCS:.c=.o) #(formel: $(VAR:pattern=replacement))
 
 # Default target

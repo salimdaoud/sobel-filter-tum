@@ -1,4 +1,5 @@
 #include "io.h"
+#include "grayscale.h"
 
 // Sobel operator implementation
 void sobel(
@@ -7,13 +8,16 @@ void sobel(
     void* tmp,
     uint8_t* result
 ) {
-    uint8_t* gray = (uint8_t*)tmp; // Temporary buffer for grayscale image
+    /*uint8_t* gray = (uint8_t*)tmp; // Temporary buffer for grayscale image
 
     // Grayscale conversion
     for (size_t i = 0; i < width * height; i++) {
         size_t idx = i * 3; // Each pixel has 3 components (R, G, B)
         gray[i] = (uint8_t)((a * img[idx] + b * img[idx + 1] + c * img[idx + 2]) / (a + b + c));
-    }
+    }*/
+    uint8_t* gray = (uint8_t*)tmp;
+
+    grayscale(img, width, height, a, b, c, gray);
 
     // Sobel edge detection
     int Mv[3][3] = {
