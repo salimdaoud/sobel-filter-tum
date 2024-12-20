@@ -20,9 +20,9 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     args->repetitions = 1;
     args->input_file = NULL;
     args->output_file = NULL;
-    args->coeffs[0] = 0.0;
-    args->coeffs[1] = 0.0;
-    args->coeffs[2] = 0.0;
+    args->coeffs[0] = 0;
+    args->coeffs[1] = 0;
+    args->coeffs[2] = 0;
 
     static struct option long_options[] = {
     {"help",    no_argument,       0, 'h'},
@@ -35,21 +35,23 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
         switch (opt){
             case 'v': case 'V': //Implementation version
                 if (optarg != NULL){
-                    args->v_flag = atoi(optarg);
+                    char* endptr;
+                    args->v_flag = (int) strtol(optarg, &endptr, 10);
                 }
                 else {args->v_flag = 0;}
                 break;
             case 'b': case 'B': // Runtime measurement
                 if (optarg != NULL){
+                    char* endptr;
                     args->b_flag = 1;
-                    args->repetitions = atoi(optarg);
+                    args->repetitions = (int) strtol(optarg, &endptr, 10);
                 }
                 break;
             case 'o': // Output file
                 if (optarg != NULL){
                 args->output_file = optarg;
                 }
-                // is an error required if there is no optarg ?
+                // is an error required if there is no optarg?
                 break;
             case 'h': // Help message
                 print_help();
@@ -60,11 +62,14 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
                 if (strcmp("coeffs", long_options[option_index].name) == 0) {
                     if (optind + 2 > argc) { // optind is used with functions like getopt and getopt_long to keep track of the next index in the argv array to be processed
                         fprintf(stderr, "Error: --coeffs requires three floating point arguments.\n");
-                        exit(1); //review because not necessarly optind + 2 < argc and there are three floating point arguments
+                        exit(1); //review because not necessarily optind + 2 < argc
+                                        // and there are three floating point arguments
                     }
-                    args->coeffs[0] = atof(argv[optind - 1]); //because when counting in array, we start by 0 as index
-                    args->coeffs[1] = atof(argv[optind]);
-                    args->coeffs[2] = atof(argv[optind + 1]);
+                    char* endptr;
+                    args->coeffs[0] = strtod(argv[optind - 1], &endptr);   //because when counting in an array,
+                                                                                // we start by 0 as index
+                    args->coeffs[1] = strtod(argv[optind], &endptr);
+                    args->coeffs[2] = strtod(argv[optind + 1], &endptr);
                     optind += 2; // Advance past extra arguments
                 }
                 break;
@@ -75,7 +80,7 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     }
     // Positional argument (input file)
     if (optind < argc) {
-        args->input_file = argv[optind]; // optind points to positional argument, which is input file 
+        args->input_file = argv[optind]; // optind points to positional argument, which is an input file
     } else {
         fprintf(stderr, "Error: Input file is required.\n");
         print_help();

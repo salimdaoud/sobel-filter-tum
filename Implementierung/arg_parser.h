@@ -9,7 +9,7 @@ struct ParsedArgs {
     int repetitions;     // Number of repetitions
     char *input_file;    // Input file name
     char *output_file;   // Output file name
-    float coeffs[3];     // Coefficients for conversion
+    double coeffs[3];     // Coefficients for conversion
 };
 
 void print_help();

@@ -69,14 +69,19 @@ void readPPM(const char* filename, int* width, int* height, uint8_t** rgbData) {
 
     // Parse header
     char magic[3];
-    int maxval;
+    char widthStr[10], heightStr[10], maxvalStr[10];
+    //int maxval;
     fscanf(file, "%2s", magic);
     if (strcmp(magic, "P6") != 0) {
         fprintf(stderr, "Unsupported format\n");
         fclose(file);
         exit(1);
     }
-    fscanf(file, "%d %d %d", width, height, &maxval);
+    char* endptr;
+    fscanf(file, "%9s %9s %9s", widthStr, heightStr, maxvalStr);
+    *width = (int)strtol(widthStr, &endptr, 10);
+    *height = (int)strtol(heightStr, &endptr, 10);
+    //maxval = (int)strtol(maxvalStr, &endptr, 10);
     fgetc(file); // Consume the newline after maxval
 
     // Allocate and read pixel data

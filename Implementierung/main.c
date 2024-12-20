@@ -12,14 +12,14 @@ int main(int argc, char* argv[]) {
     }
 
     /*if (argc < 3) {
-        fprintf(stderr, "Usage: %s <input.ppm> -o <output.pgm>\n", argv[0]);
+        printf(stderr, "Usage: %s <input.ppm> -o <output.pgm>\n", argv[0]);
         return 1;
     }*/
 
     int width, height;
     uint8_t* rgbData = NULL;
 
-    // Read PPM file
+    // Read a PPM file
     readPPM(args.input_file, &width, &height, &rgbData);
 
     // Allocate buffers
