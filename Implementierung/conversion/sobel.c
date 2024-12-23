@@ -49,8 +49,18 @@ void sobel( const uint8_t* img, size_t width, size_t height,
 
             // Compute gradient magnitude
             int magnitude = (int) sqrt(sum_vertical * sum_vertical + sum_horizontal * sum_horizontal);
-            if (magnitude > 255) magnitude = 255;
+            if (magnitude > 255) {
+                magnitude = 255;
+            }
             result[ppm_y * width + ppm_x] = (uint8_t)magnitude;
         }
     }
+}
+
+void sobel_optimization( const uint8_t* img, size_t width, size_t height,
+            float a, float b, float c,
+            void* tmp,
+            uint8_t* result) {
+
+    
 }
