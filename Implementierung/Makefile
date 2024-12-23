@@ -8,6 +8,7 @@ MAIN := main.c
 # assignment task file TODO: make this find the files automatically
 ASSIGNMENT := 	conversion/sobel.c \
 				conversion/grayscale.c \
+				conversion/lookup_tables.c \
 				io/arg_parser.c \
 				io/readwrite.c
 
