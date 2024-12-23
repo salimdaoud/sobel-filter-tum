@@ -18,9 +18,6 @@ int main(int argc, char* argv[]) {
 
     int width, height;
     uint8_t* rgbData = NULL;
-    float r_value_weighted = 0.299f;
-    float g_value_weighted = 0.587f;
-    float b_value_weighted = 0.114f;
 
     // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy
     read_ppm_file(args.input_file, &width, &height, &rgbData);
@@ -28,6 +25,10 @@ int main(int argc, char* argv[]) {
     // Allocate temporary buffer for grayscale and output buffer for edges
     uint8_t* tmp = malloc(width * height);
     uint8_t* result = malloc(width * height);
+
+    float r_value_weighted = args.coeffs[0];
+    float g_value_weighted = args.coeffs[1];
+    float b_value_weighted = args.coeffs[2];
 
     if (!tmp || !result) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -41,11 +42,15 @@ int main(int argc, char* argv[]) {
     }
 
     // Apply Sobel operator
-    if(args.coeffs[0] == 0.0 && args.coeffs[1] == 0.0 && args.coeffs[2] == 0.0){
-        sobel(rgbData, width, height, 0.299f, 0.587f, 0.114f, tmp, result);
-    }
-    else {
-        sobel(rgbData, width, height, args.coeffs[0], args.coeffs[1], args.coeffs[2], tmp, result);
+    switch (args.v_flag) {
+        case 1:
+            sobel_optimization_v1(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                  b_value_weighted, tmp, result);
+            break;
+        default:
+            sobel_optimization_v1(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                  b_value_weighted, tmp, result);
+            break;
     }
 
     // Write result to PGM

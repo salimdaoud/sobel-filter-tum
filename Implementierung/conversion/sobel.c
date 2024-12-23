@@ -1,12 +1,15 @@
 #include "sobel.h"
 #include "grayscale.h"
 #include "lookup_tables.h"
+#include "../io/readwrite.h"
 
 // Sobel operator implementation
 void sobel( const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
             uint8_t* result) {
+
+    printf("Standard Sobel implementation used.\n");
 
     // Temporary buffer for grayscale image
     uint8_t* grayscale_image = (uint8_t*)tmp;
@@ -25,6 +28,9 @@ void sobel( const uint8_t* img, size_t width, size_t height,
             { 0,  0,  0},
             {-1, -2, -1}
     };
+
+    double time = 0;
+    double start = curtime();
 
     for (size_t ppm_y = 0; ppm_y < height; ppm_y++) {
         for (size_t ppm_x = 0; ppm_x < width; ppm_x++) {
@@ -56,12 +62,18 @@ void sobel( const uint8_t* img, size_t width, size_t height,
             result[ppm_y * width + ppm_x] = (uint8_t)magnitude;
         }
     }
+
+    double end = curtime();
+    time = end - start;
+    printf("time passed: %f\n", time);
 }
 
-void sobel_optimization( const uint8_t* img, size_t width, size_t height,
-            float a, float b, float c,
-            void* tmp,
-            uint8_t* result) {
+void sobel_optimization_v1(const uint8_t* img, size_t width, size_t height,
+                           float a, float b, float c,
+                           void* tmp,
+                           uint8_t* result) {
+
+    printf("V1 Sobel implementation used.\n");
 
     // Temporary buffer for grayscale image
     uint8_t* grayscale_image = (uint8_t*)tmp;
@@ -70,6 +82,9 @@ void sobel_optimization( const uint8_t* img, size_t width, size_t height,
     grayscale(img, width, height, a, b, c, grayscale_image);
 
     int row_indices [height];
+
+    double time = 0;
+    double start = curtime();
 
     for (size_t i = 0; i < height; i++) {
         row_indices[i] = i * width;
@@ -88,8 +103,8 @@ void sobel_optimization( const uint8_t* img, size_t width, size_t height,
                 if ((ppm_y + kern_y >= 0) && (ppm_y + kern_y < height)) {
                     for (int kern_x = -1; kern_x <= 1; kern_x++) {
                         // Only apply kernel values within ppm grid
-                        if ((ppm_x + kern_x >= 0 ) && (ppm_x + kern_x < width) && (kern_x + kern_y != 0)){
-                            uint8_t pixel = grayscale_image[row_indices [kern_y + ppm_y] + (ppm_x + kern_x)];
+                        if ((ppm_x + kern_x >= 0 ) && (ppm_x + kern_x < width) && !(kern_x == 0 && kern_y == 0)){
+                            uint8_t pixel = grayscale_image[row_indices[ppm_y + kern_y] + (ppm_x + kern_x)];
                             // + 1 to correct the indexing for the kernel matrix
                             sum_vertical += kern_vertical_lookup[kernel_row_indices[kern_y + 1] + kern_x + 1][pixel];
                             sum_horizontal += kern_horizontal_lookup[kernel_row_indices[kern_y + 1] + kern_x + 1][pixel];
@@ -105,8 +120,12 @@ void sobel_optimization( const uint8_t* img, size_t width, size_t height,
             if (magnitude > 255) {
                 magnitude = 255;
             }
-            result[ppm_y * width + ppm_x] = (uint8_t)magnitude;
+            result[row_indices[ppm_y] + ppm_x] = (uint8_t)magnitude;
         }
     }
+
+    double end = curtime();
+    time = end - start;
+    printf("time passed: %f\n", time);
 
 }

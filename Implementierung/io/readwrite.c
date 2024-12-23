@@ -1,5 +1,11 @@
 #include "readwrite.h"
 
+double curtime(void) {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec + t.tv_nsec * 1e-9;
+}
+
 // Read PPM file from filename into rgbData
 void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pixel_rgb_data) {
 

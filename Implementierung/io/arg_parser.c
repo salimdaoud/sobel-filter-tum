@@ -20,9 +20,9 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     args->repetitions = 1;
     args->input_file = NULL;
     args->output_file = NULL;
-    args->coeffs[0] = 0;
-    args->coeffs[1] = 0;
-    args->coeffs[2] = 0;
+    args->coeffs[0] = 0.299f;
+    args->coeffs[1] = 0.587f;
+    args->coeffs[2] = 0.114f;
 
     static struct option long_options[] = {
     {"help",    no_argument,       0, 'h'},
