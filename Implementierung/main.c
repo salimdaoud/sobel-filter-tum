@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
                                   b_value_weighted, tmp, result);
             break;
         default:
-            sobel_optimization_v1(rgbData, width, height, r_value_weighted, g_value_weighted,
+            sobel(rgbData, width, height, r_value_weighted, g_value_weighted,
                                   b_value_weighted, tmp, result);
             break;
     }
