@@ -1,5 +1,10 @@
+#define _POSIX_C_SOURCE 199309L
 #include "sobel.h"
 #include "grayscale.h"
+#include <time.h>
+#include <immintrin.h>
+#include <stddef.h>
+#include <stdint.h>
 
 // Sobel operator implementation
 void sobel( const uint8_t* img, size_t width, size_t height,
@@ -10,8 +15,19 @@ void sobel( const uint8_t* img, size_t width, size_t height,
     // Temporary buffer for grayscale image
     uint8_t* grayscale_image = (uint8_t*)tmp;
 
+    /*struct timespec start;
+    int iterations = 5000;*/
     // Grayscale conversion
-    grayscale(img, width, height, a, b, c, grayscale_image);
+    //clock_gettime (CLOCK_MONOTONIC , &start);
+    //for( int i = 0; i < iterations ; ++ i){
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+    //}
+    /*struct timespec end;
+    clock_gettime (CLOCK_MONOTONIC , & end ) ;
+    double time = end . tv_sec - start . tv_sec + 1e-9 *
+    ( end . tv_nsec - start . tv_nsec );
+    double avg_time = time / iterations ;
+    printf("%f\n", avg_time);*/
 
     // Sobel edge detection
     int kern_vertical[3][3] = {
