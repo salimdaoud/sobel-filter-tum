@@ -11,5 +11,10 @@ void sobel( const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
             uint8_t* result);
+        
+void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
+            float a, float b, float c,
+            void* tmp,
+            uint8_t* result);
 
 #endif
