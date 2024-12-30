@@ -3,8 +3,13 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <immintrin.h>
 
-void grayscale(const uint8_t* img, size_t width, size_t height,
+void img_to_grayscale(const uint8_t* img, size_t width, size_t height,
                float a, float b, float c, uint8_t* tmp);
+
+void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
+               float a, float b, float c,
+               uint8_t* gray);
 
 #endif
