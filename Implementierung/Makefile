@@ -36,12 +36,12 @@ debug: CFLAGS += -g
 debug: $(TARGET)
 
 # Release build
-release: CFLAGS += -O2
+release: CFLAGS += -O2 
 release: $(TARGET)
 
 # recipe for building the program
 $(TARGET): $(SOURCES)
-	$(CC) $(CFLAGS) -o $@ $(SOURCES)  -lm
+	$(CC)  -msse4.1 $(CFLAGS) -o $@ $(SOURCES)  -lm
 
 # clean up
 clean:

@@ -1,6 +1,8 @@
+#define _POSIX_C_SOURCE 199309L
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 
 
@@ -26,7 +28,7 @@ int main(int argc, char* argv[]) {
 
 
     // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy
-    read_ppm_file(args.input_file, &width, &height, &rgbData);
+    read_ppm_file_parallel_mmap(args.input_file, &width, &height, &rgbData);
     
     // Allocate temporary buffer for grayscale and output buffer for edges
     uint8_t* tmp = malloc(width * height);
@@ -45,15 +47,26 @@ int main(int argc, char* argv[]) {
 
     // Apply Sobel operator
     if(args.coeffs[0] == 0.0 && args.coeffs[1] == 0.0 && args.coeffs[2] == 0.0){
-        sobel(rgbData, width, height, r_value_weighted, g_value_weighted, b_value_weighted, tmp, result);
+        int iterations = 100;
+         struct timespec start;
+        clock_gettime (CLOCK_MONOTONIC , &start);
+        for( int i = 0; i < iterations ; ++ i){
+            sobel_optimized(rgbData, width, height, r_value_weighted, g_value_weighted, b_value_weighted, tmp, result);
+        }
+        struct timespec end;
+        clock_gettime (CLOCK_MONOTONIC , & end ) ;
+        double time = end . tv_sec - start . tv_sec + 1e-9 *
+        ( end . tv_nsec - start . tv_nsec );
+        double avg_time = time / iterations ;
+        printf("Time elapsed: %f seconds\n", avg_time);
     }
     else {
-        sobel(rgbData, width, height, args.coeffs[0], args.coeffs[1], args.coeffs[2], tmp, result);
+        sobel_optimized(rgbData, width, height, args.coeffs[0], args.coeffs[1], args.coeffs[2], tmp, result);
     }
 
     // Write result to PGM
     if (args.output_file != NULL){
-        write_pgm_file_parallel(args.output_file, result, width, height);}
+        write_pgm_file(args.output_file, result, width, height);}
     else {
         args.output_file = malloc(strlen(args.input_file) + 1 );
         if (args.output_file == NULL) {
@@ -65,7 +78,7 @@ int main(int argc, char* argv[]) {
         if (dot != NULL) {
             strcpy(dot, ".pgm"); // Replace the extension
         }
-            write_pgm_file_parallel(args.output_file, result, width, height);
+            write_pgm_file(args.output_file, result, width, height);
     }
 
     // Free memory
