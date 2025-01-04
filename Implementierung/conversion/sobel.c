@@ -1,7 +1,8 @@
 #include "sobel.h"
 #include "grayscale.h"
-#include "lookup_tables.h"
+#include "../util/lookup_tables.h"
 #include "../io/readwrite.h"
+#include "../util/square_root.h"
 
 // Sobel operator implementation
 void sobel( const uint8_t* img, size_t width, size_t height,
@@ -128,4 +129,86 @@ void sobel_optimization_v1(const uint8_t* img, size_t width, size_t height,
     time = end - start;
     printf("time passed: %f\n", time);
 
+}
+
+void sobel_optimization_v2(const uint8_t* img, size_t width, size_t height,
+                           float a, float b, float c,
+                           void* tmp,
+                           uint8_t* result) {
+
+    printf("V2 Sobel implementation used.\n");
+
+    // Temporary buffer for grayscale image
+    uint8_t* grayscale_image = (uint8_t*)tmp;
+
+    // Grayscale conversion
+    grayscale(img, width, height, a, b, c, grayscale_image);
+    size_t arr_ct = 0;
+
+    int row_indices [height];
+
+    double time = 0;
+    double start = curtime();
+
+    for (size_t i = 0; i < height; i++) {
+        row_indices[i] = i * width;
+    }
+
+    // Sobel edge detection
+    int kern_vertical[3][3] = {
+            {1, 0, -1},
+            {2, 0, -2},
+            {1, 0, -1}
+    };
+
+    int kern_horizontal[3][3] = {
+            { 1,  2,  1},
+            { 0,  0,  0},
+            {-1, -2, -1}
+    };
+
+    for (size_t ppm_y = 0; ppm_y < height; ppm_y++) {
+        for (size_t ppm_x = 0; ppm_x < width; ppm_x++) {
+            int sum_vertical = 0, sum_horizontal = 0;
+
+            // Apply Sobel kernel to pixel
+            for (int kern_y = -1; kern_y <= 1; kern_y++) {
+                // Only apply kernel values within ppm grid
+                if ((ppm_y + kern_y >= 0) && (ppm_y + kern_y < height)) {
+                    for (int kern_x = -1; kern_x <= 1; kern_x++) {
+                        // Only apply kernel values within ppm grid, check for kernel values to be non zero first
+                        if (!(kern_x == 0 && kern_y == 0) && (ppm_x + kern_x >= 0 ) && (ppm_x + kern_x < width)){
+                            uint8_t pixel = grayscale_image[row_indices[ppm_y + kern_y] + (ppm_x + kern_x)];
+                            // + 1 to correct the indexing for the kernel matrix
+                            sum_vertical += kern_vertical[kern_y + 1][kern_x + 1] * pixel;
+                            sum_horizontal += kern_horizontal[kern_y + 1][kern_x + 1] * pixel;
+                        }
+                        else continue;
+                    }
+                }
+                else continue;
+            }
+
+            // Compute gradient magnitude
+            uint8_t magnitude;
+            if ((sum_horizontal >= 255 || sum_horizontal <= -255 || sum_vertical >= 255 || sum_vertical <= -255) ||
+                ((sum_horizontal >= 181 || sum_horizontal <= -181) && (sum_vertical >= 181 || sum_vertical <= -181))){
+                magnitude = 255;
+            } else {
+                uint32_t sum_kernel = (sum_vertical * sum_vertical + sum_horizontal * sum_horizontal);
+                if (sum_kernel < 65025) {
+                    magnitude = squareroot_lookup(sum_kernel);
+                    //printf("%d\n", magnitude);
+                } else {
+                    magnitude = 255;
+                    //printf("%d\n", magnitude);
+                }
+            }
+            result[arr_ct++] = magnitude;
+        }
+    }
+
+    double end = curtime();
+    time = end - start;
+    printf("time passed: %f\n", time);
 }
