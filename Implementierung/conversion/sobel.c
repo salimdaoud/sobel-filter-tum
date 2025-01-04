@@ -318,3 +318,90 @@ void sobel_optimization_v3(const uint8_t* img, size_t width, size_t height,
     free(temporary_sum_2);
 
 }
+
+void sobel_optimization_v4(const uint8_t* img, size_t width, size_t height,
+                           float a, float b, float c,
+                           void* tmp,
+                           uint8_t* result) {
+
+    printf("V4 Sobel implementation used.\n");
+
+    // Temporary buffer for grayscale image
+    uint8_t* grayscale_image = (uint8_t*)tmp;
+
+    // Grayscale conversion
+    grayscale(img, width, height, a, b, c, grayscale_image);
+
+    size_t size = width * height;
+
+    int *temporary_sum = malloc((size)*sizeof(int));
+    int *temporary_sum_2 = malloc((size)*sizeof(int));
+    int *temporary_sum_3 = malloc((size)*sizeof(int));
+
+    int row_indices [height];
+
+    double time = 0;
+    double start = curtime();
+
+    for (size_t i = 0; i < height; i++) {
+        row_indices[i] = i * width;
+    }
+
+    int row = 0;
+    int sum = 0;
+    int sum2 = 0;
+
+    for (size_t ppm_y = 0; ppm_y < height; ppm_y++) {
+        for (size_t ppm_x = 0; ppm_x < width; ppm_x++) {
+            sum = 0;
+            sum2 = 0;
+            row = row_indices[ppm_y];
+            if (ppm_x > 0) {
+                sum = grayscale_image[row + ppm_x - 1];
+                sum2 = -grayscale_image[row + ppm_x - 1];
+            }
+            sum += grayscale_image[row + ppm_x] * 2;
+            if (ppm_x + 1 < width) {
+                sum += grayscale_image[row + ppm_x + 1];
+                sum2 += grayscale_image[row + ppm_x + 1];
+            }
+            temporary_sum [row + ppm_x] = sum;
+            temporary_sum_2 [row + ppm_x] = sum2;
+        }
+    }
+
+    for (size_t ppm_y = 0; ppm_y < height; ppm_y++) {
+        for (size_t ppm_x = 0; ppm_x < width; ppm_x++) {
+            sum = 0;
+            sum2 = 0;
+            row = row_indices[ppm_y];
+            if (ppm_y > 0) {
+                sum = - temporary_sum[row - width + ppm_x];
+                sum2 = temporary_sum_2[row - width + ppm_x];
+            }
+            sum2 += temporary_sum_2[row + ppm_x] * 2;
+            if (ppm_y + 1 < height) {
+                sum += temporary_sum[row + width + ppm_x];
+                sum2 += temporary_sum_2[row + width + ppm_x];
+            }
+            temporary_sum_3 [row + ppm_x] = sum * sum + sum2 * sum2;
+        }
+    }
+
+    for (size_t i = 0; i < size; i ++) {
+        if (temporary_sum_3[i] < 65025) {
+            result[i] = (uint8_t) sqrt(temporary_sum_3[i]);
+        } else {
+            result [i] = 255;
+        }
+
+    }
+
+    double end = curtime();
+    time = end - start;
+    printf("time passed: %f\n", time);
+
+    free(temporary_sum);
+    free(temporary_sum_2);
+
+}
