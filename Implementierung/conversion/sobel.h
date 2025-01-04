@@ -22,6 +22,12 @@ void sobel_optimization_v2(const uint8_t* img, size_t width, size_t height,
                            void* tmp,
                            uint8_t* result);
 
+void sobel_optimization_v3(const uint8_t* img, size_t width, size_t height,
+                           float a, float b, float c,
+                           void* tmp,
+                           uint8_t* result);
+
+
 
 
 #endif
