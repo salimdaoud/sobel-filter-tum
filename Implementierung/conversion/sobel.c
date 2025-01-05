@@ -15,19 +15,8 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
     // Temporary buffer for grayscale image
     uint8_t* grayscale_image = (uint8_t*)tmp;
 
-    /*struct timespec start;
-    int iterations = 5000;*/
-    // Grayscale conversion
-    //clock_gettime (CLOCK_MONOTONIC , &start);
-    //for( int i = 0; i < iterations ; ++ i){
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
-    //}
-    /*struct timespec end;
-    clock_gettime (CLOCK_MONOTONIC , & end ) ;
-    double time = end . tv_sec - start . tv_sec + 1e-9 *
-    ( end . tv_nsec - start . tv_nsec );
-    double avg_time = time / iterations ;
-    printf("%f\n", avg_time);*/
+    //Grayscale calculation
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image, time_flag);
 
     // Sobel edge detection
     int kern_vertical[3][3] = {
@@ -91,7 +80,7 @@ void sobel_optimized( const uint8_t* img, size_t width, size_t height,
             uint8_t* result, int time_flag) {
 
             uint8_t* grayscale_image = (uint8_t*)tmp;
-            img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+            img_to_grayscale(img, width, height, a, b, c, grayscale_image, time_flag);
 
             uint8_t* image_0 = grayscale_image + width * 0;
             uint8_t* image_1 = grayscale_image + width * 1;
@@ -150,7 +139,7 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
             uint8_t* result, int time_flag) {
 
     uint8_t *grayscale_image = (uint8_t *) tmp;
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image, time_flag);
 
     uint8_t *image_0 = grayscale_image + width * 0;
     uint8_t *image_1 = grayscale_image + width * 1;

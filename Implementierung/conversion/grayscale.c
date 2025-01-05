@@ -1,22 +1,39 @@
+#define _POSIX_C_SOURCE 199309L
 #include "grayscale.h"
+#include <time.h>
+#include <stdio.h>
 
 void img_to_grayscale(const uint8_t* img, size_t width, size_t height,
                float a, float b, float c,
-               uint8_t* gray){
+               uint8_t* gray, int time_flag){
 
 
     //gray = (uint8_t*)tmp; // Temporary buffer for grayscale image
+
+    //Start time measurement
+    struct timespec start;
+    if(time_flag) {
+        clock_gettime(CLOCK_MONOTONIC, &start);
+    }
 
     // Grayscale conversion
     for (size_t i = 0; i < width * height; i++) {
         size_t idx = i * 3; // Each pixel has 3 components (R, G, B)
         gray[i] = (uint8_t)((a * img[idx] + b * img[idx + 1] + c * img[idx + 2]) / (a + b + c));
     }
+
+    //End time measurement
+    if(time_flag) {
+        struct timespec end;
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        double time = (double) (end.tv_sec - start.tv_sec) + 1e-9 * (double) (end.tv_nsec - start.tv_nsec);
+        printf("Time elapsed for img_to_grayscale: %f seconds\n", time);
+    }
 }
 
 void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
                float a, float b, float c,
-               uint8_t* gray){
+               uint8_t* gray, int time_flag) {
                     size_t total_pixels = width * height;
                     __m128 weight_r = _mm_set1_ps(a);        // [a, a, a, a]
                     __m128 weight_g = _mm_set1_ps(b);        // [b, b, b, b]
@@ -24,6 +41,12 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
                     __m128 weight_sum = _mm_set1_ps(a + b + c); // [a+b+c, a+b+c, a+b+c, a+b+c]
                     size_t i = 0;
                     size_t simd_pixels = total_pixels - (total_pixels % 4); // Process in chunks of 4 pixels
+
+                    //Start time measurement
+                    struct timespec start;
+                    if(time_flag) {
+                        clock_gettime(CLOCK_MONOTONIC, &start);
+                    }
 
                     for (; i < simd_pixels; i+=4){
                         __m128 r = _mm_set_ps(
@@ -57,5 +80,13 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
                         size_t idx = i * 3; // Each pixel has 3 components (R, G, B)
                         gray[i] = (uint8_t)((a * img[idx] + b * img[idx + 1] + c * img[idx + 2]) / (a + b + c));
                         }
+
+                    //End time measurement
+                    if(time_flag) {
+                        struct timespec end;
+                        clock_gettime(CLOCK_MONOTONIC, &end);
+                        double time = (double) (end.tv_sec - start.tv_sec) + 1e-9 * (double) (end.tv_nsec - start.tv_nsec);
+                        printf("Time elapsed for img_to_grayscale_SIMD: %f seconds\n", time);
+                    }
                }
 
