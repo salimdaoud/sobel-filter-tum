@@ -12,7 +12,7 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
             void* tmp,
             uint8_t* result);
         
-void sobel_optimized(const uint8_t* img, size_t width, size_t height,
+void sobel_kernel_unroll(const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
             uint8_t* result);
@@ -21,5 +21,15 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
             uint8_t* result);
+
+void sobel_squareroot_lookup(const uint8_t* img, size_t width, size_t height,
+                             float a, float b, float c,
+                             void* tmp,
+                             uint8_t* result);
+
+void sobel_separated_convolution(const uint8_t* img, size_t width, size_t height,
+                                 float a, float b, float c,
+                                 void* tmp,
+                                 uint8_t* result);
 
 #endif

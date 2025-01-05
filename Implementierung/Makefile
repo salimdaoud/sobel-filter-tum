@@ -9,7 +9,10 @@ MAIN := main.c
 ASSIGNMENT := 	conversion/sobel.c \
 				conversion/grayscale.c \
 				io/arg_parser.c \
-				io/readwrite.c
+				io/readwrite.c \
+				util/lookup_tables.c \
+				util/square_root.c \
+				util/time_measurement.c
 
 # Additional flags for the compiler
 CFLAGS := -Wall -Wextra -std=c17 
@@ -32,7 +35,7 @@ TARGET := $(basename $(MAIN))
 all: debug
 
 # Debug build
-debug: CFLAGS += -g
+debug: CFLAGS += -g -o0
 debug: $(TARGET)
 
 # Release build
@@ -48,3 +51,5 @@ clean:
 	rm -f $(TARGET)
 
 .PHONY: all debug release clean
+
+# TODO: automate performance tests

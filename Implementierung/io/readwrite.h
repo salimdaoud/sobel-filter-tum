@@ -1,6 +1,5 @@
 #ifndef READWRITE_H
 #define READWRITE_H
-#define _POSIX_C_SOURCE 200809L
 
 #include <stddef.h>
 #include <stdint-gcc.h>
@@ -12,6 +11,12 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdbool.h>
+#include <time.h>
+#include <unistd.h>
+#include <errno.h>
+#include <bits/time.h>
+#include <time.h>
 
 typedef struct {
     char* mapped_file;
@@ -21,28 +26,23 @@ typedef struct {
 } ThreadData;
 
 typedef struct {
-    const uint8_t* data; // Pointer to the pixel data
-    size_t start;        // Start offset in the data
-    size_t size;         // Size of the chunk to write
-    int fd;              // File descriptor
+    const uint8_t* data;
+    size_t start;
+    size_t size;
+    int fd;
 } ThreadData_write;
 
-int open_and_validate_file(const char* filename, size_t* file_size);
+int open_and_validate_file(const char* file_name, size_t* file_size);
 
-size_t parse_ppm_header(const char* file_data, int* width, int* height, int* max_val);
 
-uint8_t* allocate_pixel_memory(int width, int height);
+size_t parse_ppm_header(char* file_data, int* width, int* height, int* max_val);
 
-void read_ppm_file(const char* filename, int* width, int* height, uint8_t** pixel_rgb_data);
+void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pixel_rgb_data, bool use_io_threading);
 
-void* read_chunk(void* arg);
+void* read_thread_section(void* arg);
 
-void read_ppm_file_parallel_mmap(const char* filename, int* width, int* height, uint8_t** pixel_rgb_data);
-
-void write_pgm_file(const char* filename, const uint8_t* data, int width, int height);
+void write_pgm_file(const char* filename, const uint8_t* data, int width, int height, bool use_io_threading);
 
 void* write_chunk(void* arg);
-
-void write_pgm_file_parallel(const char* filename, const uint8_t* data, int width, int height);
 
 #endif
