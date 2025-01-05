@@ -8,6 +8,7 @@ void print_help() {
     printf("  -o <Dateiname>       Specify output file\n");
     printf("  --coeffs <a> <b> <c> Set coefficients a, b, and c for conversion\n");
     printf("  -h, --help           Show this help message and exit\n");
+    printf("  -t                   Enable time-measurement\n");
 }
 
 int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
@@ -23,6 +24,7 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     args->coeffs[0] = 0;
     args->coeffs[1] = 0;
     args->coeffs[2] = 0;
+    args->time_flag = 0;
 
     static struct option long_options[] = {
     {"help",    no_argument,       0, 'h'},
@@ -31,7 +33,7 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     };
   
     
-    while ((opt = getopt_long(argc, argv, "V:B:v:b:o:h", long_options, &option_index)) != -1){
+    while ((opt = getopt_long(argc, argv, "V:B:v:b:o:h:t", long_options, &option_index)) != -1){
         switch (opt){
             case 'v': case 'V': //Implementation version
                 if (optarg != NULL){
@@ -56,6 +58,9 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
             case 'h': // Help message
                 print_help();
                 exit(0);
+            case 't': // Time measurement
+                args->time_flag = 1;
+                break;
             case 0: // Long options like --coeffs
 
                 //getopt_long updates option_index automatically when a long option is successfully matched.

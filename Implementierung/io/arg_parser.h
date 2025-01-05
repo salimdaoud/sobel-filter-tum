@@ -10,6 +10,7 @@ struct ParsedArgs {
     char *input_file;           // Input file name
     char *output_file;          // Output file name
     double coeffs[3];           // Coefficients for conversion
+    int time_flag;              // Flag for time measurement
 };
 
 void print_help();

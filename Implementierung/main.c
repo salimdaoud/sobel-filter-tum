@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 199309L
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -48,20 +48,12 @@ int main(int argc, char* argv[]) {
     // Apply Sobel operator
     if(args.coeffs[0] == 0.0 && args.coeffs[1] == 0.0 && args.coeffs[2] == 0.0){
         int iterations = 100;
-         struct timespec start;
-        clock_gettime (CLOCK_MONOTONIC , &start);
         for( int i = 0; i < iterations ; ++ i){
-            sobel_optimized(rgbData, width, height, r_value_weighted, g_value_weighted, b_value_weighted, tmp, result);
+            sobel_SIMD(rgbData, width, height, r_value_weighted, g_value_weighted, b_value_weighted, tmp, result, args.time_flag);
         }
-        struct timespec end;
-        clock_gettime (CLOCK_MONOTONIC , & end ) ;
-        double time = end . tv_sec - start . tv_sec + 1e-9 *
-        ( end . tv_nsec - start . tv_nsec );
-        double avg_time = time / iterations ;
-        printf("Time elapsed: %f seconds\n", avg_time);
     }
     else {
-        sobel_optimized(rgbData, width, height, args.coeffs[0], args.coeffs[1], args.coeffs[2], tmp, result);
+        sobel_naive(rgbData, width, height, args.coeffs[0], args.coeffs[1], args.coeffs[2], tmp, result, args.time_flag);
     }
 
     // Write result to PGM
