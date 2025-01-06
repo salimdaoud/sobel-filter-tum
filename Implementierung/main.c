@@ -49,11 +49,11 @@ int main(int argc, char* argv[]) {
     if(args.coeffs[0] == 0.0 && args.coeffs[1] == 0.0 && args.coeffs[2] == 0.0){
         int iterations = 100;
         for( int i = 0; i < iterations ; ++ i){
-            sobel_SIMD(rgbData, width, height, r_value_weighted, g_value_weighted, b_value_weighted, tmp, result, args.time_flag);
+            sobel_SIMD(rgbData, width, height, r_value_weighted, g_value_weighted, b_value_weighted, tmp, result, args.b_flag);
         }
     }
     else {
-        sobel_naive(rgbData, width, height, args.coeffs[0], args.coeffs[1], args.coeffs[2], tmp, result, args.time_flag);
+        sobel_naive(rgbData, width, height, args.coeffs[0], args.coeffs[1], args.coeffs[2], tmp, result, args.b_flag);
     }
 
     // Write result to PGM

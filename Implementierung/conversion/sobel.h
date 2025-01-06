@@ -11,18 +11,18 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
             uint8_t* result,
-            int time_flag);
+            _Bool b_flag);
         
 void sobel_optimized(const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
             uint8_t* result,
-            int time_flag);
+            _Bool b_flag);
 
 void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
             uint8_t* result,
-            int time_flag);
+            _Bool b_flag);
 
 #endif

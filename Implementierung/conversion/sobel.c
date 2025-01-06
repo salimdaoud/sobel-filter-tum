@@ -10,13 +10,13 @@
 void sobel_naive( const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
-            uint8_t* result, int time_flag) {
+            uint8_t* result, _Bool b_flag) {
 
     // Temporary buffer for grayscale image
     uint8_t* grayscale_image = (uint8_t*)tmp;
 
     //Grayscale calculation
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image, time_flag);
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image, b_flag);
 
     // Sobel edge detection
     int kern_vertical[3][3] = {
@@ -32,7 +32,7 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
 
     // Start time measurement
     struct timespec start;
-    if(time_flag) {
+    if(b_flag) {
         clock_gettime(CLOCK_MONOTONIC, &start);
     }
 
@@ -66,7 +66,7 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
     }
 
     // End time measurement
-    if(time_flag) {
+    if(b_flag) {
         struct timespec end;
         clock_gettime(CLOCK_MONOTONIC, &end);
         double time = (double) (end.tv_sec - start.tv_sec) + 1e-9 * (double) (end.tv_nsec - start.tv_nsec);
@@ -77,10 +77,10 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
 void sobel_optimized( const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
-            uint8_t* result, int time_flag) {
+            uint8_t* result, _Bool b_flag) {
 
             uint8_t* grayscale_image = (uint8_t*)tmp;
-            img_to_grayscale(img, width, height, a, b, c, grayscale_image, time_flag);
+            img_to_grayscale(img, width, height, a, b, c, grayscale_image, b_flag);
 
             uint8_t* image_0 = grayscale_image + width * 0;
             uint8_t* image_1 = grayscale_image + width * 1;
@@ -88,7 +88,7 @@ void sobel_optimized( const uint8_t* img, size_t width, size_t height,
 
             //Start time measurement
             struct timespec start;
-            if(time_flag) {
+            if(b_flag) {
                 clock_gettime(CLOCK_MONOTONIC, &start);
             }
 
@@ -125,7 +125,7 @@ void sobel_optimized( const uint8_t* img, size_t width, size_t height,
             }
 
             //End time measurement
-            if(time_flag) {
+            if(b_flag) {
                 struct timespec end;
                 clock_gettime(CLOCK_MONOTONIC, &end);
                 double time = (double) (end.tv_sec - start.tv_sec) + 1e-9 * (double) (end.tv_nsec - start.tv_nsec);
@@ -136,10 +136,10 @@ void sobel_optimized( const uint8_t* img, size_t width, size_t height,
 void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
-            uint8_t* result, int time_flag) {
+            uint8_t* result, _Bool b_flag) {
 
     uint8_t *grayscale_image = (uint8_t *) tmp;
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image, time_flag);
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image, b_flag);
 
     uint8_t *image_0 = grayscale_image + width * 0;
     uint8_t *image_1 = grayscale_image + width * 1;
@@ -152,7 +152,7 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
 
     // Start time measurement
     struct timespec start;
-    if (time_flag) {
+    if (b_flag) {
         clock_gettime(CLOCK_MONOTONIC, &start);
     }
 
@@ -226,7 +226,7 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
     }
 
     // End time measurement
-    if(time_flag) {
+    if(b_flag) {
         struct timespec end;
         clock_gettime(CLOCK_MONOTONIC, &end);
         double time = (double) (end.tv_sec - start.tv_sec) + 1e-9 * (double) (end.tv_nsec - start.tv_nsec);

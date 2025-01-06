@@ -5,14 +5,14 @@
 
 void img_to_grayscale(const uint8_t* img, size_t width, size_t height,
                float a, float b, float c,
-               uint8_t* gray, int time_flag){
+               uint8_t* gray, _Bool b_flag){
 
 
     //gray = (uint8_t*)tmp; // Temporary buffer for grayscale image
 
     //Start time measurement
     struct timespec start;
-    if(time_flag) {
+    if(b_flag) {
         clock_gettime(CLOCK_MONOTONIC, &start);
     }
 
@@ -23,7 +23,7 @@ void img_to_grayscale(const uint8_t* img, size_t width, size_t height,
     }
 
     //End time measurement
-    if(time_flag) {
+    if(b_flag) {
         struct timespec end;
         clock_gettime(CLOCK_MONOTONIC, &end);
         double time = (double) (end.tv_sec - start.tv_sec) + 1e-9 * (double) (end.tv_nsec - start.tv_nsec);
@@ -33,7 +33,7 @@ void img_to_grayscale(const uint8_t* img, size_t width, size_t height,
 
 void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
                float a, float b, float c,
-               uint8_t* gray, int time_flag) {
+               uint8_t* gray, _Bool b_flag) {
                     size_t total_pixels = width * height;
                     __m128 weight_r = _mm_set1_ps(a);        // [a, a, a, a]
                     __m128 weight_g = _mm_set1_ps(b);        // [b, b, b, b]
@@ -44,7 +44,7 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
 
                     //Start time measurement
                     struct timespec start;
-                    if(time_flag) {
+                    if(b_flag) {
                         clock_gettime(CLOCK_MONOTONIC, &start);
                     }
 
@@ -82,7 +82,7 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
                         }
 
                     //End time measurement
-                    if(time_flag) {
+                    if(b_flag) {
                         struct timespec end;
                         clock_gettime(CLOCK_MONOTONIC, &end);
                         double time = (double) (end.tv_sec - start.tv_sec) + 1e-9 * (double) (end.tv_nsec - start.tv_nsec);
