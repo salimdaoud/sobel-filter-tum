@@ -12,7 +12,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <time.h>
 #include <unistd.h>
 #include <errno.h>
 #include <bits/time.h>

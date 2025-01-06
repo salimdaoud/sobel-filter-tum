@@ -5,18 +5,25 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     // Open and validate the file
     size_t file_size;
 
-    int file_descriptor = open_and_validate_file(file_name, &file_size);
+    int file_descriptor;
+    if ((file_descriptor = open_and_validate_file(file_name, &file_size)) == -1) {
+        goto cleanup;
+    }
 
     // Memory-map the file. Not necessarry for sequential implementation, but we wanted to make it uniform.
-    char* mapped_file = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0);
-    if (mapped_file == MAP_FAILED) {
-        perror("Error mapping file.\n");
+    char* mapped_file;
+    if ((mapped_file = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0))
+        == MAP_FAILED) {
+        perror("Error mapping file.");
         goto cleanup;
     }
 
     // Parse the header
     int max_val;
-    size_t header_size = parse_ppm_header(mapped_file, width, height, &max_val);
+    size_t header_size;
+    if ((header_size = parse_ppm_header(mapped_file, width, height, &max_val)) == -1) {
+        goto cleanup;
+    }
 
     size_t image_size = *width * *height;
     size_t rgb_values = image_size * 3;
@@ -64,7 +71,7 @@ int open_and_validate_file(const char* file_name, size_t* file_size) {
     int file_descriptor = open(file_name, O_RDONLY);
 
     if (file_descriptor == -1) {
-        perror("Error opening file\n");
+        perror("Error opening file.");
         exit(1);
     }
 
@@ -134,7 +141,7 @@ void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, 
     // Open the file
     int file_descriptor = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (file_descriptor < 0) {
-        perror("Error opening file.\n");
+        perror("Error opening file.");
         return;
     }
 
@@ -142,7 +149,7 @@ void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, 
     char header[128];
     int header_size = snprintf(header, sizeof(header), "P5\n%d %d\n255\n", width, height);
     if (write(file_descriptor, header, header_size) < 0) {
-        perror("Error writing header.\n");
+        perror("Error writing header.");
         goto cleanup;
     }
 
@@ -183,7 +190,8 @@ void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, 
 void* write_thread_section(void* arg) {
     ThreadData_write *thread_data = (ThreadData_write *)arg;
 
-    if (pwrite(thread_data->file_descriptor, thread_data->data + thread_data->start, thread_data->size, thread_data->start + thread_data->header_offset) < 0) {
+    if (pwrite(thread_data->file_descriptor, thread_data->data + thread_data->start,
+               thread_data->size, thread_data->start + thread_data->header_offset) < 0) {
         fprintf(stderr, "Error writing pixel data into output file.\n");
         exit(1);
     }

@@ -1,4 +1,3 @@
-#define _POSIX_C_SOURCE 199309L
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -28,14 +27,13 @@ int main(int argc, char* argv[]) {
     // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy
     read_ppm_file(args.input_file, &width, &height, &rgbData, true);
 
-
     // Allocate temporary buffer for grayscale and output buffer for edges
     uint8_t* tmp = malloc(width * height);
     uint8_t* result = malloc(width * height);
 
-    float r_value_weighted = args.coeffs[0];
-    float g_value_weighted = args.coeffs[1];
-    float b_value_weighted = args.coeffs[2];
+    float r_value_weighted = args.rgb_coeffs[0];
+    float g_value_weighted = args.rgb_coeffs[1];
+    float b_value_weighted = args.rgb_coeffs[2];
 
     if (!tmp || !result) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -48,47 +46,36 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    //if (args.b_flag) {
-    //    repetitions = args.repetitions;
-    //    struct timespec start;
-    //    clock_gettime (CLOCK_MONOTONIC , &start);
-    //}
-
     for (size_t i = 0; i < repetitions; i++) {
-        // Apply Sobel operator
-        choose_implementation:
-        switch (args.v_flag) {
+        switch (args.version_flag) {
             case 1:
+                printf("Squareroot lookup Sobel implementation used.\n");
                 sobel_squareroot_lookup(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                        b_value_weighted, tmp, result);
+                                        b_value_weighted, tmp, result, args.benchmark_flag);
                 break;
             case 2:
+                printf("Kernel unroll Sobel implementation used.\n");
                 sobel_kernel_unroll(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                    b_value_weighted, tmp, result);
+                                    b_value_weighted, tmp, result, args.benchmark_flag);
                 break;
             case 3:
+                printf("SIMD Sobel implementation used.\n");
                 sobel_SIMD(rgbData, width, height, r_value_weighted, g_value_weighted,
-                           b_value_weighted, tmp, result);
+                           b_value_weighted, tmp, result, args.benchmark_flag);
                 break;
             case 4:
+                printf("Separated Convolution Sobel implementation used.\n");
                 sobel_separated_convolution(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                            b_value_weighted, tmp, result);
+                                            b_value_weighted, tmp, result, args.benchmark_flag);
                 break;
             default:
+                printf("Standard Sobel implementation used.\n");
                 sobel_naive(rgbData, width, height, r_value_weighted, g_value_weighted,
-                            b_value_weighted, tmp, result);
+                            b_value_weighted, tmp, result, args.benchmark_flag);
                 break;
         }
 
     }
-
-    //if (args.b_flag) {
-    //    struct timespec end;
-    //    clock_gettime (CLOCK_MONOTONIC , & end ) ;
-    //    double time = end . tv_sec - start . tv_sec + 1e-9 * ( end . tv_nsec - start . tv_nsec );
-    //    double avg_time = time / repetitions ;
-    //    printf("Time elapsed: %f seconds\n", avg_time);
-    //}
 
     // Write result to PGM
     if (args.output_file != NULL){
@@ -108,6 +95,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Free memory
+    clean_up_time_measurement();
     free(rgbData);
     free(tmp);
     free(result);
