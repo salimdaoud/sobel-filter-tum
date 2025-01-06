@@ -4,7 +4,7 @@ void print_help() {
     printf("Usage: program [options] <inputfile>\n");
     printf("Options:\n");
     printf("  -V <Zahl>            Specify the implementation version (default: 0)\n");
-    printf("  -B<Zahl>             Measure runtime with optional repetitions\n");
+    printf("  -B [Zahl]            Measure runtime with optional repetitions\n");
     printf("  -o <Dateiname>       Specify output file\n");
     printf("  --coeffs <a> <b> <c> Set coefficients a, b, and c for conversion\n");
     printf("  -h, --help           Show this help message and exit\n");
@@ -31,7 +31,7 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     };
   
     
-    while ((opt = getopt_long(argc, argv, "V:B:v:b:o:h", long_options, &option_index)) != -1){
+    while ((opt = getopt_long(argc, argv, "V:B::v:b:o:h", long_options, &option_index)) != -1){
         switch (opt){
             case 'v': case 'V': //Implementation version
                 if (optarg != NULL){
@@ -41,9 +41,9 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
                 else {args->v_flag = 0;}
                 break;
             case 'b': case 'B': // Runtime measurement
+                args->b_flag = 1;
                 if (optarg != NULL){
                     char* endptr;
-                    args->b_flag = 1;
                     args->repetitions = (int) strtol(optarg, &endptr, 10);
                 }
                 break;
