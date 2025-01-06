@@ -375,4 +375,5 @@ void sobel_separated_convolution( const uint8_t* img, size_t width, size_t heigh
 
     free(temporary_sum);
     free(temporary_sum_2);
+    free(temporary_sum_3);
 }

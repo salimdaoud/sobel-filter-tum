@@ -97,7 +97,6 @@ void img_to_grayscale_bitshift(const uint8_t* img, size_t width, size_t height,
         start_time_measurement();
     }
 
-    // Grayscale conversion
     for (size_t i = 0, j = 0; i < rgb_values_count; i += 3, j++) {
         gray[j] = (uint8_t)((img[i] >> 2) + (img[i + 1] >> 1) + (img[i + 2] >> 2));
     }
