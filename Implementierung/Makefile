@@ -9,7 +9,8 @@ MAIN := main.c
 ASSIGNMENT := 	conversion/sobel.c \
 				conversion/grayscale.c \
 				io/arg_parser.c \
-				io/readwrite.c
+				io/readwrite.c \
+				test.c 
 
 # Additional flags for the compiler
 CFLAGS := -Wall -Wextra -std=c17 

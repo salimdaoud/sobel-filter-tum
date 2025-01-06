@@ -5,6 +5,9 @@
 #include <emmintrin.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <pthread.h>
+#include <stdlib.h>
+#define THREAD_COUNT 16
 
 // Sobel operator implementation
 void sobel_naive( const uint8_t* img, size_t width, size_t height,
@@ -214,3 +217,90 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
             image_2 += width;
         }
     }
+
+void* sobel_worker(void* args) {
+    SobelArgs* sobelArgs = (SobelArgs*)args;
+
+    size_t width = sobelArgs->width;
+    size_t height = sobelArgs->height;
+    uint8_t* grayscale_image = sobelArgs->grayscale_image;
+    uint8_t* result = sobelArgs->result;
+    size_t start_row = sobelArgs->start_row;
+    size_t end_row = sobelArgs->end_row;
+
+    uint8_t* image_0 = grayscale_image + width * (start_row - 1);
+    uint8_t* image_1 = grayscale_image + width * start_row;
+    uint8_t* image_2 = grayscale_image + width * (start_row + 1);
+
+    for (size_t y = start_row; y < end_row; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            int gx = 0, gy = 0;
+
+            uint8_t top_left = (y > 0 && x > 0) ? image_0[x - 1] : 0;
+            uint8_t top = (y > 0) ? image_0[x] : 0;
+            uint8_t top_right = (y > 0 && x < width - 1) ? image_0[x + 1] : 0;
+            uint8_t left = (x > 0) ? image_1[x - 1] : 0;
+            uint8_t right = (x < width - 1) ? image_1[x + 1] : 0;
+            uint8_t bottom_left = (y < height - 1 && x > 0) ? image_2[x - 1] : 0;
+            uint8_t bottom = (y < height - 1) ? image_2[x] : 0;
+            uint8_t bottom_right = (y < height - 1 && x < width - 1) ? image_2[x + 1] : 0;
+
+            // Calculate gx and gy
+            gx =    top_left * (+1) + top_right * (-1) +
+                    left * (+2) + right * (-2) +
+                    bottom_left * (+1) + bottom_right * (-1);
+
+            gy =    top_left * (+1) + top * (+2) + top_right * (+1) +
+                    bottom_left * (-1) + bottom * (-2) + bottom_right * (-1);
+
+            int magnitude = (int)sqrt(gx * gx + gy * gy);
+            if (magnitude > 255) magnitude = 255;
+            result[y * width + x] = (uint8_t)magnitude;
+        }
+        if (y < height - 1) {
+            image_0 += width;
+            image_1 += width;
+            image_2 += width;
+        }
+    }
+
+    return NULL;
+}
+
+void sobel_multithreaded(const uint8_t* img, size_t width, size_t height,
+                         float a, float b, float c, void* tmp, uint8_t* result) {
+    uint8_t* grayscale_image = (uint8_t*)tmp;
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+
+    pthread_t threads[THREAD_COUNT];
+    SobelArgs thread_args[THREAD_COUNT];
+
+    size_t rows_per_thread = height / THREAD_COUNT;
+    size_t remainder = height % THREAD_COUNT;
+
+    size_t current_start = 0;
+
+    for (size_t i = 0; i < THREAD_COUNT; ++i) {
+        size_t extra_row = (i < remainder) ? 1 : 0; // Distribute remainder rows
+        size_t current_end = current_start + rows_per_thread + extra_row;
+
+        thread_args[i].img = img;
+        thread_args[i].width = width;
+        thread_args[i].height = height;
+        thread_args[i].a = a;
+        thread_args[i].b = b;
+        thread_args[i].c = c;
+        thread_args[i].grayscale_image = grayscale_image;
+        thread_args[i].result = result;
+        thread_args[i].start_row = current_start;
+        thread_args[i].end_row = current_end;
+
+        pthread_create(&threads[i], NULL, sobel_worker, &thread_args[i]);
+
+        current_start = current_end; // Update the starting row for the next thread
+    }
+
+    for (int i = 0; i < THREAD_COUNT; ++i) {
+        pthread_join(threads[i], NULL);
+    }
+}

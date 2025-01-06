@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include "test.h"
 
 
 
@@ -51,7 +52,7 @@ int main(int argc, char* argv[]) {
          struct timespec start;
         clock_gettime (CLOCK_MONOTONIC , &start);
         for( int i = 0; i < iterations ; ++ i){
-            sobel_optimized(rgbData, width, height, r_value_weighted, g_value_weighted, b_value_weighted, tmp, result);
+            sobel_multithreaded(rgbData, width, height, r_value_weighted, g_value_weighted, b_value_weighted, tmp, result);
         }
         struct timespec end;
         clock_gettime (CLOCK_MONOTONIC , & end ) ;
@@ -61,7 +62,7 @@ int main(int argc, char* argv[]) {
         printf("Time elapsed: %f seconds\n", avg_time);
     }
     else {
-        sobel_optimized(rgbData, width, height, args.coeffs[0], args.coeffs[1], args.coeffs[2], tmp, result);
+        sobel_multithreaded(rgbData, width, height, args.coeffs[0], args.coeffs[1], args.coeffs[2], tmp, result);
     }
 
     // Write result to PGM
@@ -86,5 +87,12 @@ int main(int argc, char* argv[]) {
     free(tmp);
     free(result);
 
+
+    test_img_to_grayscale();
+    test_img_to_grayscale_little_weights();
+    test_sobel_naive();
+    
     return 0;
+
+
 }
