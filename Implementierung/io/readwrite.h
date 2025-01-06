@@ -29,7 +29,8 @@ typedef struct {
     const uint8_t* data;
     size_t start;
     size_t size;
-    int fd;
+    int file_descriptor;
+    uint8_t header_offset;
 } ThreadData_write;
 
 int open_and_validate_file(const char* file_name, size_t* file_size);
@@ -41,8 +42,8 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
 
 void* read_thread_section(void* arg);
 
-void write_pgm_file(const char* filename, const uint8_t* data, int width, int height, bool use_io_threading);
+void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, int height, bool use_io_threading);
 
-void* write_chunk(void* arg);
+void* write_thread_section(void* arg);
 
 #endif

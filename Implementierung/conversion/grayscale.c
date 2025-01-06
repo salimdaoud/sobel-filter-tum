@@ -1,6 +1,6 @@
 #include "grayscale.h"
 
-void img_to_grayscale(const uint8_t* img, size_t width, size_t height,
+void img_to_grayscale_naive(const uint8_t* img, size_t width, size_t height,
                float a, float b, float c,
                uint8_t* gray){
 
@@ -14,7 +14,7 @@ void img_to_grayscale(const uint8_t* img, size_t width, size_t height,
     }
 }
 
-void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
+void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
                float a, float b, float c,
                uint8_t* gray){
                     size_t total_pixels = width * height;
@@ -57,5 +57,30 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
                         size_t idx = i * 3; // Each pixel has 3 components (R, G, B)
                         gray[i] = (uint8_t)((a * img[idx] + b * img[idx + 1] + c * img[idx + 2]) / (a + b + c));
                         }
-               }
+}
+
+void img_to_grayscale(const uint8_t* img, size_t width, size_t height,
+                      float a, float b, float c,
+                      uint8_t* gray){
+    size_t rgb_values_count = width * height * 3;
+
+    // Grayscale conversion
+    for (size_t i = 0, j = 0; i < rgb_values_count; i += 3, j++) {
+        gray[j] = (uint8_t)(a * img[i] + b * img[i + 1] + c * img[i + 2]);
+    }
+}
+
+void img_to_grayscale_bitshift(const uint8_t* img, size_t width, size_t height,
+                      float a, float b, float c,
+                      uint8_t* gray){
+    size_t rgb_values_count = width * height * 3;
+
+    // Grayscale conversion
+    for (size_t i = 0, j = 0; i < rgb_values_count; i += 3, j++) {
+        gray[j] = (uint8_t)((img[i] >> 2) + (img[i + 1] >> 1) + (img[i + 2] >> 2));
+    }
+}
+
+
+
 

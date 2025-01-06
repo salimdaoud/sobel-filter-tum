@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     uint8_t* rgbData = NULL;
 
     // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy
-    read_ppm_file(args.input_file, &width, &height, &rgbData, false);
+    read_ppm_file(args.input_file, &width, &height, &rgbData, true);
 
 
     // Allocate temporary buffer for grayscale and output buffer for edges
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
         if (dot != NULL) {
             strcpy(dot, ".pgm"); // Replace the extension
         }
-            write_pgm_file(args.output_file, result, width, height, false);
+            write_pgm_file(args.output_file, result, width, height, true);
     }
 
     // Free memory

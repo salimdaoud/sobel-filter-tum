@@ -95,52 +95,60 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
     printf("time passed: %f\n", time);
 }
 
-void sobel_kernel_unroll( const uint8_t* img, size_t width, size_t height,
-            float a, float b, float c,
-            void* tmp,
-            uint8_t* result){
+void sobel_kernel_unroll(const uint8_t* img, size_t width, size_t height,
+                         float a, float b, float c,
+                         void* tmp,
+                         uint8_t* result) {
 
-            uint8_t* grayscale_image = (uint8_t*)tmp;
-            img_to_grayscale(img, width, height, a, b, c, grayscale_image);
-
-
-            uint8_t* image_0 = grayscale_image + width * 0;
-            uint8_t* image_1 = grayscale_image + width * 1;
-            uint8_t* image_2 = grayscale_image + width * 2;
+    uint8_t* grayscale_image = (uint8_t*) tmp;
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
 
 
+    uint8_t* image_0 = grayscale_image + width * 0;
+    uint8_t* image_1 = grayscale_image + width * 1;
+    uint8_t* image_2 = grayscale_image + width * 2;
 
-            for (size_t y = 0; y < height; ++y) {
-                for (size_t x = 0; x < width; ++x) {
-                    int gx = 0, gy = 0;
-                    uint8_t top_left = (y > 0 && x > 0) ? image_0[x - 1] : 0;
-                    uint8_t top = (y > 0) ? image_0[x] : 0;
-                    uint8_t top_right = (y > 0 && x < width - 1) ? image_0[x + 1] : 0;
-                    uint8_t left = (x > 0) ? image_1[x - 1] : 0;
-                    uint8_t right = (x < width - 1) ? image_1[x + 1] : 0;
-                    uint8_t bottom_left = (y < height - 1 && x > 0) ? image_2[x - 1] : 0;
-                    uint8_t bottom = (y < height - 1) ? image_2[x] : 0;
-                    uint8_t bottom_right = (y < height - 1 && x < width - 1) ? image_2[x + 1] : 0;
+    int row_indices[height];
 
-                    // Calculate gx and gy
-                    gx =    top_left * (+1) + top_right * (-1) +
-                            left * (+2) + right * (-2) +
-                            bottom_left * (+1) + bottom_right * (-1);
+    for (size_t i = 0; i < height; i++) {
+        row_indices[i] = i * width;
+    }
 
-                    gy =    top_left * (+1) + top * (+2) + top_right * (+1) +
-                            bottom_left * (-1) + bottom * (-2) + bottom_right * (-1);
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            int gx = 0, gy = 0;
+            uint8_t top_left = (y > 0 && x > 0) ? image_0[x - 1] : 0;
+            uint8_t top = (y > 0) ? image_0[x] : 0;
+            uint8_t top_right = (y > 0 && x < width - 1) ? image_0[x + 1] : 0;
+            uint8_t left = (x > 0) ? image_1[x - 1] : 0;
+            uint8_t right = (x < width - 1) ? image_1[x + 1] : 0;
+            uint8_t bottom_left = (y < height - 1 && x > 0) ? image_2[x - 1] : 0;
+            uint8_t bottom = (y < height - 1) ? image_2[x] : 0;
+            uint8_t bottom_right = (y < height - 1 && x < width - 1) ? image_2[x + 1] : 0;
 
+            // Calculate gx and gy
+            gx = top_left * (+1) + top_right * (-1) +
+                 left * (+2) + right * (-2) +
+                 bottom_left * (+1) + bottom_right * (-1);
 
-                    int magnitude = (int) sqrt(gx * gx + gy * gy);
-                    if (magnitude > 255) magnitude = 255;
-                    result[y * width + x] = (uint8_t)magnitude;
-                    }
-                    if (y < height - 1) {
-                        image_0 += width;
-                        image_1 += width;
-                        image_2 += width;
-                        }
+            gy = top_left * (+1) + top * (+2) + top_right * (+1) +
+                 bottom_left * (-1) + bottom * (-2) + bottom_right * (-1);
+
+            int sum = gx * gx + gy * gy;
+            uint8_t magnitude;
+            if (sum < 65025) {
+                magnitude = sqrt(sum);
+            } else {
+                magnitude = 255;
             }
+            result[row_indices[y] + x] = magnitude;
+        }
+        if (y < height - 1) {
+            image_0 += width;
+            image_1 += width;
+            image_2 += width;
+        }
+    }
 }
 
 void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
@@ -159,6 +167,9 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
             __m128 const_p_two = _mm_set1_ps(+2.0f);
             __m128 const_n_one = _mm_set1_ps(-1.0f);
             __m128 const_n_two = _mm_set1_ps(-2.0f);
+
+    double time = 0;
+    double start = curtime();
 
 
         for (size_t y = 0; y < height; ++y) {
@@ -229,6 +240,10 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
             image_1 += width;
             image_2 += width;
         }
+
+    double end = curtime();
+    time = end - start;
+    printf("time passed: %f\n", time);
 }
 
 void sobel_squareroot_lookup(const uint8_t* img, size_t width, size_t height,

@@ -47,7 +47,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
             pthread_join(threads[i], NULL);
         }
     } else {
-        memcpy(*pixel_rgb_data, (const char*) (mapped_file + header_size), rgb_values);
+        memcpy(*pixel_rgb_data, mapped_file + header_size, rgb_values);
     }
 
     cleanup:
@@ -105,13 +105,10 @@ size_t parse_ppm_header(char* file_data, int* width, int* height, int* max_val) 
     }
     file_data = strchr(file_data, '\n') + 1;
 
-    if ((sscanf(file_data, "%d", &max_val)) <= 0) {
+    if ((sscanf(file_data, "%d", max_val)) <= 0) {
         fprintf(stderr, "Error trying to read image max colour value from PPM header.\n");
         return -1;
     }
-    file_data = strchr(file_data, '\n') + 1;
-
-    // Skip new line after max value.
     file_data = strchr(file_data, '\n') + 1;
 
     // Return the size of the header
@@ -131,8 +128,8 @@ void* read_thread_section(void* arg) {
     return NULL;
 }
 
-// Write PGM file from data to filename
-void write_pgm_file(const char* filename, const uint8_t* data, int width, int height, bool use_io_threading) {
+// Write PGM file from sobel_data to filename
+void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, int height, bool use_io_threading) {
     size_t image_size = width * height;
     // Open the file
     int file_descriptor = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -151,27 +148,28 @@ void write_pgm_file(const char* filename, const uint8_t* data, int width, int he
 
     if (use_io_threading) {
         int num_threads = 4;
-        // Divide the data into chunks
-        size_t chunk_size = (image_size + num_threads - 1) / num_threads;
+        // Divide the sobel_data into chunks
+        size_t thread_section_size = (image_size + num_threads - 1) / num_threads;
 
         pthread_t threads[num_threads];
         ThreadData_write thread_data[num_threads];
 
         for (int i = 0; i < num_threads; i++) {
-            thread_data[i].data = data;
-            thread_data[i].start = header_size + i * chunk_size;
-            thread_data[i].size = (i == num_threads - 1) ? (image_size - i * chunk_size) : chunk_size;
-            thread_data[i].fd = file_descriptor;
+            thread_data[i].data = sobel_data;
+            thread_data[i].start = i * thread_section_size;
+            thread_data[i].size = (i == num_threads - 1) ? (image_size - i * thread_section_size) : thread_section_size;
+            thread_data[i].file_descriptor = file_descriptor;
+            thread_data[i].header_offset = header_size;
 
-            pthread_create(&threads[i], NULL, write_chunk, &thread_data[i]);
+            pthread_create(&threads[i], NULL, write_thread_section, &thread_data[i]);
         }
 
         for (int i = 0; i < num_threads; i++) {
             pthread_join(threads[i], NULL);
         }
     } else {
-        if (pwrite(file_descriptor, data, image_size, header_size) < 0) {
-            fprintf(stderr, "Error writing pixel data into output file.\n");
+        if (pwrite(file_descriptor, sobel_data, image_size, header_size) < 0) {
+            fprintf(stderr, "Error writing pixel sobel_data into output file.\n");
             goto cleanup;
         }
     }
@@ -182,10 +180,10 @@ void write_pgm_file(const char* filename, const uint8_t* data, int width, int he
     }
 }
 
-void* write_chunk(void* arg) {
+void* write_thread_section(void* arg) {
     ThreadData_write *thread_data = (ThreadData_write *)arg;
 
-    if (pwrite(thread_data->fd, thread_data->data + thread_data->start, thread_data->size, thread_data->start) < 0) {
+    if (pwrite(thread_data->file_descriptor, thread_data->data + thread_data->start, thread_data->size, thread_data->start + thread_data->header_offset) < 0) {
         fprintf(stderr, "Error writing pixel data into output file.\n");
         exit(1);
     }
