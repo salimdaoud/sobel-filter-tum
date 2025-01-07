@@ -1,36 +1,13 @@
-#define _POSIX_C_SOURCE 199309L
 #include "sobel.h"
-#include "grayscale.h"
-#include <time.h>
-#include <emmintrin.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <pthread.h>
-#include <stdlib.h>
-#define THREAD_COUNT 16
 
 // Sobel operator implementation
 void sobel_naive( const uint8_t* img, size_t width, size_t height,
-            float a, float b, float c,
-            void* tmp,
-            uint8_t* result) {
+            float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag ) {
 
     // Temporary buffer for grayscale image
     uint8_t* grayscale_image = (uint8_t*)tmp;
 
-    /*struct timespec start;
-    int iterations = 5000;*/
-    // Grayscale conversion
-    //clock_gettime (CLOCK_MONOTONIC , &start);
-    //for( int i = 0; i < iterations ; ++ i){
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
-    //}
-    /*struct timespec end;
-    clock_gettime (CLOCK_MONOTONIC , & end ) ;
-    double time = end . tv_sec - start . tv_sec + 1e-9 *
-    ( end . tv_nsec - start . tv_nsec );
-    double avg_time = time / iterations ;
-    printf("%f\n", avg_time);*/
+    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image, benchmark_flag);
 
     // Sobel edge detection
     int kern_vertical[3][3] = {
@@ -44,9 +21,9 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
             {-1, -2, -1}
     };
 
-    // Start time measurement
-    /*struct timespec start;
-    clock_gettime(CLOCK_MONOTONIC, &start);*/
+    if(benchmark_flag) {
+        start_time_measurement();
+    }
 
     for (size_t ppm_y = 0; ppm_y < height; ppm_y++) {
         for (size_t ppm_x = 0; ppm_x < width; ppm_x++) {
@@ -55,10 +32,10 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
             // Apply Sobel kernel to pixel
             for (int kern_y = -1; kern_y <= 1; kern_y++) {
                 // Only apply kernel values within ppm grid
-                if ((ppm_y + kern_y) < height) {
+                if ((ppm_y + kern_y != SIZE_MAX) && (ppm_y + kern_y < height)) {
                     for (int kern_x = -1; kern_x <= 1; kern_x++) {
                         // Only apply kernel values within ppm grid
-                        if ((ppm_x + kern_x) < width){
+                        if ((ppm_x + kern_x != SIZE_MAX) && (ppm_x + kern_x < width)){
                             uint8_t pixel = grayscale_image[(kern_y + ppm_y) * width + (ppm_x + kern_x)];
                             // + 1 to correct the indexing for the kernel matrix
                             sum_vertical += kern_vertical[kern_y + 1][kern_x + 1] * pixel;
@@ -72,170 +49,103 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
 
             // Compute gradient magnitude
             int magnitude = (int) sqrt(sum_vertical * sum_vertical + sum_horizontal * sum_horizontal);
-            if (magnitude > 255) magnitude = 255;
+            if (magnitude > 255) {
+                magnitude = 255;
+            }
             result[ppm_y * width + ppm_x] = (uint8_t)magnitude;
         }
     }
 
-    // End time measurement
-   /*struct timespec end;
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    double time = (double) (end.tv_sec - start.tv_sec) + 1e-9 * (double) (end.tv_nsec - start.tv_nsec);
-    printf("Time elapsed: %f seconds\n", time);*/
+    if(benchmark_flag) {
+        end_time_measurement("Naive Sobel Implementation");
+    }
 }
 
-void sobel_optimized( const uint8_t* img, size_t width, size_t height,
-            float a, float b, float c,
-            void* tmp,
-            uint8_t* result){
+void sobel_kernel_unroll( const uint8_t* img, size_t width, size_t height,
+                         float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag ) {
 
-            uint8_t* grayscale_image = (uint8_t*)tmp;
-            img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+    uint8_t* grayscale_image = (uint8_t*) tmp;
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
 
-            uint8_t* image_0 = grayscale_image + width * 0;
-            uint8_t* image_1 = grayscale_image + width * 1;
-            uint8_t* image_2 = grayscale_image + width * 2;
+    uint8_t* image_row_prev = grayscale_image - width;
+    uint8_t* image_row_now = grayscale_image;
+    uint8_t* image_row_next = grayscale_image + width;
 
-
-
-            for (size_t y = 0; y < height; ++y) {
-                for (size_t x = 0; x < width; ++x) {
-                    int gx = 0, gy = 0;
-                    uint8_t top_left = (y > 0 && x > 0) ? image_0[x - 1] : 0;
-                    uint8_t top = (y > 0) ? image_0[x] : 0;
-                    uint8_t top_right = (y > 0 && x < width - 1) ? image_0[x + 1] : 0;
-                    uint8_t left = (x > 0) ? image_1[x - 1] : 0;
-                    uint8_t right = (x < width - 1) ? image_1[x + 1] : 0;
-                    uint8_t bottom_left = (y < height - 1 && x > 0) ? image_2[x - 1] : 0;
-                    uint8_t bottom = (y < height - 1) ? image_2[x] : 0;
-                    uint8_t bottom_right = (y < height - 1 && x < width - 1) ? image_2[x + 1] : 0;
-
-                    // Calculate gx and gy
-                    gx =    top_left * (+1) + top_right * (-1) +
-                            left * (+2) + right * (-2) +
-                            bottom_left * (+1) + bottom_right * (-1);
-
-                    gy =    top_left * (+1) + top * (+2) + top_right * (+1) +
-                            bottom_left * (-1) + bottom * (-2) + bottom_right * (-1);
-
-
-                    int magnitude = (int) sqrt(gx * gx + gy * gy);
-                    if (magnitude > 255) magnitude = 255;
-                    result[y * width + x] = (uint8_t)magnitude;
-                    }
-                    if (y < height - 1) {
-                        image_0 += width;
-                        image_1 += width;
-                        image_2 += width;
-                        }
-            }
-            }
-void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
-            float a, float b, float c,
-            void* tmp,
-            uint8_t* result){
-            
-            uint8_t* grayscale_image = (uint8_t*)tmp;
-            img_to_grayscale(img, width, height, a, b, c, grayscale_image);
-
-            uint8_t* image_0 = grayscale_image + width * 0;
-            uint8_t* image_1 = grayscale_image + width * 1;
-            uint8_t* image_2 = grayscale_image + width * 2;
-
-            __m128 const_p_one = _mm_set1_ps(+1.0f);
-            __m128 const_p_two = _mm_set1_ps(+2.0f);
-            __m128 const_n_one = _mm_set1_ps(-1.0f);
-            __m128 const_n_two = _mm_set1_ps(-2.0f);
-
-    
-        for (size_t y = 0; y < height; ++y) {
-            for (size_t x = 0; x < width; x += 4) {
-                // Handle zero padding at the edges
-                __m128i current_0 = _mm_setzero_si128();
-                __m128i current_1 = _mm_setzero_si128();
-                __m128i current_2 = _mm_setzero_si128();
-
-                if (y > 0) {
-                    current_0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(image_0 + x - 1)), _mm_setzero_si128());
-                }
-                current_1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(image_1 + x - 1)), _mm_setzero_si128());
-                if (y < height - 1) {
-                    current_2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(image_2 + x - 1)), _mm_setzero_si128());
-                }
-
-                // Zero padding for columns
-                if (x == 0) {
-                    current_0 = _mm_srli_si128(current_0, 2);
-                    current_1 = _mm_srli_si128(current_1, 2);
-                    current_2 = _mm_srli_si128(current_2, 2);
-                }
-
-                if (x >= width - 4) {
-                    current_0 = _mm_slli_si128(current_0, 2);
-                    current_1 = _mm_slli_si128(current_1, 2);
-                    current_2 = _mm_slli_si128(current_2, 2);
-                }
-
-                // Process Sobel filter
-                __m128 image_00 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(current_0, _mm_setzero_si128()));
-                __m128 image_01 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_0, 2), _mm_setzero_si128()));
-                __m128 image_02 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_0, 4), _mm_setzero_si128()));
-                __m128 image_10 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(current_1, _mm_setzero_si128()));
-                __m128 image_12 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_1, 4), _mm_setzero_si128()));
-                __m128 image_20 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(current_2, _mm_setzero_si128()));
-                __m128 image_21 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_2, 2), _mm_setzero_si128()));
-                __m128 image_22 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_2, 4), _mm_setzero_si128()));
-
-                // Calculate gx and gy
-                __m128 gx = _mm_add_ps(_mm_mul_ps(image_00, const_p_one),
-                            _mm_add_ps(_mm_mul_ps(image_02, const_n_one),
-                            _mm_add_ps(_mm_mul_ps(image_10, const_p_two),
-                            _mm_add_ps(_mm_mul_ps(image_12, const_n_two),
-                            _mm_add_ps(_mm_mul_ps(image_20, const_p_one),
-                                   _mm_mul_ps(image_22, const_n_one))))));
-
-                __m128 gy = _mm_add_ps(_mm_mul_ps(image_00, const_p_one),
-                            _mm_add_ps(_mm_mul_ps(image_01, const_p_two),
-                            _mm_add_ps(_mm_mul_ps(image_02, const_p_one),
-                            _mm_add_ps(_mm_mul_ps(image_20, const_n_one),
-                            _mm_add_ps(_mm_mul_ps(image_21, const_n_two),
-                                   _mm_mul_ps(image_22, const_n_one))))));
-
-                // Compute gradient magnitude
-                __m128 gradient = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(gx, gx), _mm_mul_ps(gy, gy)));
-                __m128 clamped = _mm_min_ps(_mm_set1_ps(255.0f), gradient);
-                __m128i pack_32 = _mm_cvtps_epi32(clamped);
-                __m128i pack_16 = _mm_packus_epi32(pack_32, pack_32);
-                __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
-
-                // Store the result
-                _mm_storel_epi64((__m128i*)(result + y * width + x), pack_8);
-            }
-
-            image_0 += width;
-            image_1 += width;
-            image_2 += width;
-        }
+    if(benchmark_flag) {
+        start_time_measurement();
     }
 
-void* sobel_worker(void* args) {
-    SobelArgs* sobelArgs = (SobelArgs*)args;
+    size_t row_indices[height];
 
-    size_t width = sobelArgs->width;
-    size_t height = sobelArgs->height;
-    uint8_t* grayscale_image = sobelArgs->grayscale_image;
-    uint8_t* result = sobelArgs->result;
-    size_t start_row = sobelArgs->start_row;
-    size_t end_row = sobelArgs->end_row;
+    for (size_t i = 0; i < height; i++) {
+        row_indices[i] = i * width;
+    }
 
-    uint8_t* image_0 = grayscale_image + width * (start_row - 1);
-    uint8_t* image_1 = grayscale_image + width * start_row;
-    uint8_t* image_2 = grayscale_image + width * (start_row + 1);
+    for (size_t gray_y = 0; gray_y < height; gray_y++) {
+        for (size_t gray_x = 0; gray_x < width; gray_x++) {
+            int gradient_vert = 0, gradient_hor = 0;
+            uint8_t top_left = (gray_y > 0 && gray_x > 0) ? image_row_prev[gray_x - 1] : 0;
+            uint8_t top = (gray_y > 0) ? image_row_prev[gray_x] : 0;
+            uint8_t top_right = (gray_y > 0 && gray_x < width - 1) ? image_row_prev[gray_x + 1] : 0;
+            uint8_t mid_left = (gray_x > 0) ? image_row_now[gray_x - 1] : 0;
+            uint8_t mid_right = (gray_x < width - 1) ? image_row_now[gray_x + 1] : 0;
+            uint8_t bottom_left = (gray_y < height - 1 && gray_x > 0) ? image_row_next[gray_x - 1] : 0;
+            uint8_t bottom = (gray_y < height - 1) ? image_row_next[gray_x] : 0;
+            uint8_t bottom_right = (gray_y < height - 1 && gray_x < width - 1) ? image_row_next[gray_x + 1] : 0;
 
-    for (size_t y = start_row; y < end_row; ++y) {
+            // Calculate gradient_vert and gradient_hor
+            gradient_vert = top_left - top_right +
+                            (mid_left << 1) - (mid_right << 1) +
+                            bottom_left - bottom_right;
+
+            gradient_hor =  top_left + (top << 1) +  top_right -
+                            bottom_left - (bottom << 1) - bottom_right;
+
+            int sum = gradient_vert * gradient_vert + gradient_hor * gradient_hor;
+            uint8_t magnitude;
+            if (sum < 65025) {
+                magnitude = sqrt(sum);
+            } else {
+                magnitude = 255;
+            }
+            result[row_indices[gray_y] + gray_x] = magnitude;
+        }
+        image_row_prev += width;
+        image_row_now += width;
+        image_row_next += width;
+    }
+
+    if(benchmark_flag) {
+        end_time_measurement("Sobel Kernel Unroll");
+    }
+}
+
+
+/*void sobel_kernel_unroll( const uint8_t* img, size_t width, size_t height,
+                         float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag ) {
+
+    uint8_t* grayscale_image = (uint8_t*) tmp;
+    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image, benchmark_flag);
+
+
+    uint8_t* image_0 = grayscale_image + width * 0;
+    uint8_t* image_1 = grayscale_image + width * 1;
+    uint8_t* image_2 = grayscale_image + width * 2;
+
+
+    if(benchmark_flag) {
+        start_time_measurement();
+    }
+
+    int row_indices[height];
+
+    for (size_t i = 0; i < height; i++) {
+        row_indices[i] = i * width;
+    }
+
+    for (size_t y = 0; y < height; ++y) {
         for (size_t x = 0; x < width; ++x) {
             int gx = 0, gy = 0;
-
             uint8_t top_left = (y > 0 && x > 0) ? image_0[x - 1] : 0;
             uint8_t top = (y > 0) ? image_0[x] : 0;
             uint8_t top_right = (y > 0 && x < width - 1) ? image_0[x + 1] : 0;
@@ -246,16 +156,23 @@ void* sobel_worker(void* args) {
             uint8_t bottom_right = (y < height - 1 && x < width - 1) ? image_2[x + 1] : 0;
 
             // Calculate gx and gy
-            gx =    top_left * (+1) + top_right * (-1) +
-                    left * (+2) + right * (-2) +
-                    bottom_left * (+1) + bottom_right * (-1);
+            gx = top_left * (+1) + top_right * (-1) +
+                 left * (+2) + right * (-2) +
+                 bottom_left * (+1) + bottom_right * (-1);
 
-            gy =    top_left * (+1) + top * (+2) + top_right * (+1) +
-                    bottom_left * (-1) + bottom * (-2) + bottom_right * (-1);
+            gy = top_left * (+1) + top * (+2) + top_right * (+1) +
+                 bottom_left * (-1) + bottom * (-2) + bottom_right * (-1);
 
-            int magnitude = (int)sqrt(gx * gx + gy * gy);
-            if (magnitude > 255) magnitude = 255;
-            result[y * width + x] = (uint8_t)magnitude;
+            printf("%d, %d\n", gx, gy);
+
+            int sum = gx * gx + gy * gy;
+            uint8_t magnitude;
+            if (sum < 65025) {
+                magnitude = sqrt(sum);
+            } else {
+                magnitude = 255;
+            }
+            result[row_indices[y] + x] = magnitude;
         }
         if (y < height - 1) {
             image_0 += width;
@@ -264,43 +181,353 @@ void* sobel_worker(void* args) {
         }
     }
 
-    return NULL;
+    if(benchmark_flag) {
+        end_time_measurement("Sobel Kernel Unroll");
+    }
+}*/
+
+void sobel_SIMD( const uint8_t* img, size_t width, size_t height,
+                float a, float b, float c, void* tmp,uint8_t* result, bool benchmark_flag ){
+
+    uint8_t* grayscale_image = (uint8_t*)tmp;
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
+
+    uint8_t* image_row_prev = grayscale_image - width;
+    uint8_t* image_row_now = grayscale_image;
+    uint8_t* image_row_next = grayscale_image + width;
+
+    __m128 const_p_one = _mm_set1_ps(+1.0f);
+    __m128 const_p_two = _mm_set1_ps(+2.0f);
+    __m128 const_n_one = _mm_set1_ps(-1.0f);
+    __m128 const_n_two = _mm_set1_ps(-2.0f);
+
+    if(benchmark_flag) {
+        start_time_measurement();
+    }
+
+    for (size_t gray_y = 0; gray_y < height; gray_y++) {
+        for (size_t gray_x = 0; gray_x < width; gray_x += 4) {
+            // Handle zero padding at the edges
+            __m128i current_0 = _mm_setzero_si128();
+            __m128i current_1 = _mm_setzero_si128();
+            __m128i current_2 = _mm_setzero_si128();
+
+            if (gray_y > 0) {
+                current_0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(image_row_prev + gray_x - 1)), _mm_setzero_si128());
+            }
+            current_1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(image_row_now + gray_x - 1)), _mm_setzero_si128());
+            if (gray_y < height - 1) {
+                current_2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(image_row_next + gray_x - 1)), _mm_setzero_si128());
+            }
+
+            // Zero padding for columns
+            if (gray_x == 0) {
+                current_0 = _mm_srli_si128(current_0, 2);
+                current_1 = _mm_srli_si128(current_1, 2);
+                current_2 = _mm_srli_si128(current_2, 2);
+            }
+
+            if (gray_x >= width - 4) {
+                current_0 = _mm_slli_si128(current_0, 2);
+                current_1 = _mm_slli_si128(current_1, 2);
+                current_2 = _mm_slli_si128(current_2, 2);
+            }
+
+            // Process Sobel filter
+            __m128 image_00 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(current_0, _mm_setzero_si128()));
+            __m128 image_01 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_0, 2), _mm_setzero_si128()));
+            __m128 image_02 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_0, 4), _mm_setzero_si128()));
+            __m128 image_10 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(current_1, _mm_setzero_si128()));
+            __m128 image_12 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_1, 4), _mm_setzero_si128()));
+            __m128 image_20 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(current_2, _mm_setzero_si128()));
+            __m128 image_21 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_2, 2), _mm_setzero_si128()));
+            __m128 image_22 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_2, 4), _mm_setzero_si128()));
+
+            // Calculate gradient_vert and gradient_hor
+            __m128 gradient_vert = _mm_add_ps(_mm_mul_ps(image_00, const_p_one),
+                                              _mm_add_ps(_mm_mul_ps(image_02, const_n_one),
+                                              _mm_add_ps(_mm_mul_ps(image_10, const_p_two),
+                                              _mm_add_ps(_mm_mul_ps(image_12, const_n_two),
+                                              _mm_add_ps(_mm_mul_ps(image_20, const_p_one),
+                                              _mm_mul_ps(image_22, const_n_one))))));
+
+            __m128 gradient_hor = _mm_add_ps(_mm_mul_ps(image_00, const_p_one),
+                                             _mm_add_ps(_mm_mul_ps(image_01, const_p_two),
+                                             _mm_add_ps(_mm_mul_ps(image_02, const_p_one),
+                                             _mm_add_ps(_mm_mul_ps(image_20, const_n_one),
+                                             _mm_add_ps(_mm_mul_ps(image_21, const_n_two),
+                                             _mm_mul_ps(image_22, const_n_one))))));
+
+            // Compute gradient magnitude
+            __m128 gradient = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(gradient_vert, gradient_vert), _mm_mul_ps(gradient_hor, gradient_hor)));
+            __m128 clamped = _mm_min_ps(_mm_set1_ps(255.0f), gradient);
+            __m128i pack_32 = _mm_cvtps_epi32(clamped);
+            __m128i pack_16 = _mm_packus_epi32(pack_32, pack_32);
+            __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
+
+            // Store the result
+            _mm_storel_epi64((__m128i*)(result + gray_y * width + gray_x), pack_8);
+        }
+        image_row_prev += width;
+        image_row_now += width;
+        image_row_next += width;
+    }
+
+    if(benchmark_flag) {
+        end_time_measurement("Sobel SIMD implementation");
+    }
 }
 
-void sobel_multithreaded(const uint8_t* img, size_t width, size_t height,
-                         float a, float b, float c, void* tmp, uint8_t* result) {
+/*void sobel_SIMD( const uint8_t* img, size_t width, size_t height,
+                float a, float b, float c, void* tmp,uint8_t* result, bool benchmark_flag ){
+
     uint8_t* grayscale_image = (uint8_t*)tmp;
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
 
-    pthread_t threads[THREAD_COUNT];
-    SobelArgs thread_args[THREAD_COUNT];
+    uint8_t* image_0 = grayscale_image + width * 0;
+    uint8_t* image_1 = grayscale_image + width * 1;
+    uint8_t* image_2 = grayscale_image + width * 2;
 
-    size_t rows_per_thread = height / THREAD_COUNT;
-    size_t remainder = height % THREAD_COUNT;
+    __m128 const_p_one = _mm_set1_ps(+1.0f);
+    __m128 const_p_two = _mm_set1_ps(+2.0f);
+    __m128 const_n_one = _mm_set1_ps(-1.0f);
+    __m128 const_n_two = _mm_set1_ps(-2.0f);
 
-    size_t current_start = 0;
-
-    for (size_t i = 0; i < THREAD_COUNT; ++i) {
-        size_t extra_row = (i < remainder) ? 1 : 0; // Distribute remainder rows
-        size_t current_end = current_start + rows_per_thread + extra_row;
-
-        thread_args[i].img = img;
-        thread_args[i].width = width;
-        thread_args[i].height = height;
-        thread_args[i].a = a;
-        thread_args[i].b = b;
-        thread_args[i].c = c;
-        thread_args[i].grayscale_image = grayscale_image;
-        thread_args[i].result = result;
-        thread_args[i].start_row = current_start;
-        thread_args[i].end_row = current_end;
-
-        pthread_create(&threads[i], NULL, sobel_worker, &thread_args[i]);
-
-        current_start = current_end; // Update the starting row for the next thread
+    if(benchmark_flag) {
+        start_time_measurement();
     }
 
-    for (int i = 0; i < THREAD_COUNT; ++i) {
-        pthread_join(threads[i], NULL);
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x = 0; x < width; x += 4) {
+            // Handle zero padding at the edges
+            __m128i current_0 = _mm_setzero_si128();
+            __m128i current_1 = _mm_setzero_si128();
+            __m128i current_2 = _mm_setzero_si128();
+
+            if (y > 0) {
+                current_0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(image_0 + x - 1)), _mm_setzero_si128());
+            }
+            current_1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(image_1 + x - 1)), _mm_setzero_si128());
+            if (y < height - 1) {
+                current_2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(image_2 + x - 1)), _mm_setzero_si128());
+            }
+
+            // Zero padding for columns
+            if (x == 0) {
+                current_0 = _mm_srli_si128(current_0, 2);
+                current_1 = _mm_srli_si128(current_1, 2);
+                current_2 = _mm_srli_si128(current_2, 2);
+            }
+
+            if (x >= width - 4) {
+                current_0 = _mm_slli_si128(current_0, 2);
+                current_1 = _mm_slli_si128(current_1, 2);
+                current_2 = _mm_slli_si128(current_2, 2);
+            }
+
+            // Process Sobel filter
+            __m128 image_00 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(current_0, _mm_setzero_si128()));
+            __m128 image_01 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_0, 2), _mm_setzero_si128()));
+            __m128 image_02 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_0, 4), _mm_setzero_si128()));
+            __m128 image_10 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(current_1, _mm_setzero_si128()));
+            __m128 image_12 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_1, 4), _mm_setzero_si128()));
+            __m128 image_20 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(current_2, _mm_setzero_si128()));
+            __m128 image_21 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_2, 2), _mm_setzero_si128()));
+            __m128 image_22 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_srli_si128(current_2, 4), _mm_setzero_si128()));
+
+            // Calculate gx and gy
+            __m128 gx = _mm_add_ps(_mm_mul_ps(image_00, const_p_one),
+                                   _mm_add_ps(_mm_mul_ps(image_02, const_n_one),
+                                              _mm_add_ps(_mm_mul_ps(image_10, const_p_two),
+                                                         _mm_add_ps(_mm_mul_ps(image_12, const_n_two),
+                                                                    _mm_add_ps(_mm_mul_ps(image_20, const_p_one),
+                                                                               _mm_mul_ps(image_22, const_n_one))))));
+
+            __m128 gy = _mm_add_ps(_mm_mul_ps(image_00, const_p_one),
+                                   _mm_add_ps(_mm_mul_ps(image_01, const_p_two),
+                                              _mm_add_ps(_mm_mul_ps(image_02, const_p_one),
+                                                         _mm_add_ps(_mm_mul_ps(image_20, const_n_one),
+                                                                    _mm_add_ps(_mm_mul_ps(image_21, const_n_two),
+                                                                               _mm_mul_ps(image_22, const_n_one))))));
+
+            // Compute gradient magnitude
+            __m128 gradient = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(gx, gx), _mm_mul_ps(gy, gy)));
+            __m128 clamped = _mm_min_ps(_mm_set1_ps(255.0f), gradient);
+            __m128i pack_32 = _mm_cvtps_epi32(clamped);
+            __m128i pack_16 = _mm_packus_epi32(pack_32, pack_32);
+            __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
+
+            // Store the result
+            _mm_storel_epi64((__m128i*)(result + y * width + x), pack_8);
+        }
+
+        image_0 += width;
+        image_1 += width;
+        image_2 += width;
     }
+
+    if(benchmark_flag) {
+        end_time_measurement("Sobel SIMD implementation");
+    }
+}*/
+
+void sobel_squareroot_lookup( const uint8_t* img, size_t width, size_t height,
+                             float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag ) {
+
+    // Temporary buffer for grayscale image
+    uint8_t* grayscale_image = (uint8_t*) tmp;
+
+    // Grayscale conversion
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
+    size_t arr_ct = 0;
+
+    // Sobel edge detection
+    int kern_vertical[3][3] = {
+            {1, 0, -1},
+            {2, 0, -2},
+            {1, 0, -1}
+    };
+
+    int kern_horizontal[3][3] = {
+            {1,  2,  1},
+            {0,  0,  0},
+            {-1, -2, -1}
+    };
+
+    if(benchmark_flag) {
+        start_time_measurement();
+    }
+
+    int row_indices[height];
+
+    for (size_t i = 0; i < height; i++) {
+        row_indices[i] = i * width;
+    }
+
+    for (size_t ppm_y = 0; ppm_y < height; ppm_y++) {
+        for (size_t ppm_x = 0; ppm_x < width; ppm_x++) {
+            int sum_vertical = 0, sum_horizontal = 0;
+
+            // Apply Sobel kernel to pixel
+            for (int kern_y = -1; kern_y <= 1; kern_y++) {
+                // Only apply kernel values within ppm grid
+                if ((ppm_y + kern_y != SIZE_MAX) && (ppm_y + kern_y < height)) {
+                    for (int kern_x = -1; kern_x <= 1; kern_x++) {
+                        // Only apply kernel values within ppm grid, check for kernel values to be non zero first
+                        if (!(kern_x == 0 && kern_y == 0) && (ppm_x + kern_x != SIZE_MAX) &&
+                        (ppm_x + kern_x < width)) {
+                            uint8_t pixel = grayscale_image[row_indices[ppm_y + kern_y] + (ppm_x + kern_x)];
+                            // + 1 to correct the indexing for the kernel matrix
+                            sum_vertical += kern_vertical[kern_y + 1][kern_x + 1] * pixel;
+                            sum_horizontal += kern_horizontal[kern_y + 1][kern_x + 1] * pixel;
+                        } else continue;
+                    }
+                } else continue;
+            }
+
+            // Compute gradient magnitude
+            uint8_t magnitude;
+            if ((sum_horizontal >= 255 || sum_horizontal <= -255 || sum_vertical >= 255 ||
+            sum_vertical <= -255) ||
+            ((sum_horizontal >= 181 || sum_horizontal <= -181) &&
+            (sum_vertical >= 181 || sum_vertical <= -181))) {
+                magnitude = 255;
+            } else {
+                uint32_t sum_kernel = (sum_vertical * sum_vertical + sum_horizontal * sum_horizontal);
+                if (sum_kernel < 65025) {
+                    magnitude = squareroot_lookup(sum_kernel);
+                } else {
+                    magnitude = 255;
+                }
+            }
+            result[arr_ct++] = magnitude;
+        }
+    }
+
+    if(benchmark_flag) {
+        end_time_measurement("Sobel Squareroot Lookup");
+    }
+}
+
+void sobel_separated_convolution( const uint8_t* img, size_t width, size_t height,
+                                 float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag ) {
+
+    // Temporary buffer for grayscale image
+    uint8_t* grayscale_image = (uint8_t*) tmp;
+
+    // Grayscale conversion
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
+
+    size_t size = width * height;
+
+    int* temporary_sum = malloc((size) * sizeof(int));
+    int* temporary_sum_2 = malloc((size) * sizeof(int));
+    int* temporary_sum_3 = malloc((size) * sizeof(int));
+
+    int row_indices[height];
+    int row = 0;
+    int sum = 0;
+    int sum2 = 0;
+
+    if(benchmark_flag) {
+        start_time_measurement();
+    }
+
+    for (size_t i = 0; i < height; i++) {
+        row_indices[i] = i * width;
+    }
+
+    for (size_t ppm_y = 0; ppm_y < height; ppm_y++) {
+        for (size_t ppm_x = 0; ppm_x < width; ppm_x++) {
+            sum = 0;
+            sum2 = 0;
+            row = row_indices[ppm_y];
+            if (ppm_x > 0) {
+                sum = grayscale_image[row + ppm_x - 1];
+                sum2 = -grayscale_image[row + ppm_x - 1];
+            }
+            sum += grayscale_image[row + ppm_x] * 2;
+            if (ppm_x + 1 < width) {
+                sum += grayscale_image[row + ppm_x + 1];
+                sum2 += grayscale_image[row + ppm_x + 1];
+            }
+            temporary_sum[row + ppm_x] = sum;
+            temporary_sum_2[row + ppm_x] = sum2;
+        }
+    }
+
+    for (size_t ppm_y = 0; ppm_y < height; ppm_y++) {
+        for (size_t ppm_x = 0; ppm_x < width; ppm_x++) {
+            sum = 0;
+            sum2 = 0;
+            row = row_indices[ppm_y];
+            if (ppm_y > 0) {
+                sum = -temporary_sum[row - width + ppm_x];
+                sum2 = temporary_sum_2[row - width + ppm_x];
+            }
+            sum2 += temporary_sum_2[row + ppm_x] * 2;
+            if (ppm_y + 1 < height) {
+                sum += temporary_sum[row + width + ppm_x];
+                sum2 += temporary_sum_2[row + width + ppm_x];
+            }
+            temporary_sum_3[row + ppm_x] = sum * sum + sum2 * sum2;
+        }
+    }
+
+    for (size_t i = 0; i < size; i++) {
+        if (temporary_sum_3[i] < 65025) {
+            result[i] = (uint8_t) sqrt(temporary_sum_3[i]);
+        } else {
+            result[i] = 255;
+        }
+
+    }
+
+    if(benchmark_flag) {
+        end_time_measurement("Sobel Separated Convolution");
+    }
+
+    free(temporary_sum);
+    free(temporary_sum_2);
+    free(temporary_sum_3);
 }

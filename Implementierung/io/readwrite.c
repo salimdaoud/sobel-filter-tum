@@ -1,115 +1,129 @@
 #include "readwrite.h"
 
-// Helper function: Open and validate file
-int open_and_validate_file(const char* filename, size_t* file_size) {
-    int fd = open(filename, O_RDONLY);
-    if (fd < 0) {
-        perror("Error opening file");
-        exit(1);
-    }
-    struct stat statbuf;
-    if (fstat(fd, &statbuf) < 0) {
-        perror("Error retrieving file stats");
-        close(fd);
-        exit(1);
-    }
-
-    if (!S_ISREG(statbuf.st_mode) || statbuf.st_size <= 0) {
-        fprintf(stderr, "Error processing file: Not a regular file or invalid size\n");
-        close(fd);
-        exit(1);
-    }
-
-    *file_size = statbuf.st_size;
-    return fd;
-}
-
-size_t parse_ppm_header(const char* file_data, int* width, int* height, int* max_val) {
-    const char* current = file_data;
-
-    // Parse the magic number (1st line)
-    char magic_number[3];
-    sscanf(current, "%2s", magic_number);
-    if (strcmp(magic_number, "P6")) {
-        fprintf(stderr, "Unsupported file format. P6 expected.\n");
-        exit(1);
-    }
-    current = strchr(current, '\n') + 1; // Move past the first line
-
-    // Parse the image dimensions (2nd line)
-    sscanf(current, "%d %d", width, height);
-    current = strchr(current, '\n') + 1; // Move past the second line
-
-    // Parse the max value (3rd line)
-    sscanf(current, "%d", max_val);
-    current = strchr(current, '\n') + 1; // Move past the third line
-
-    // Return the size of the header
-    size_t header_size = current - file_data;
-    return header_size;
-}
-
-
-// Helper function: Allocate memory
-uint8_t* allocate_pixel_memory(int width, int height) {
-    size_t pixel_count = width * height * 3;
-    uint8_t* pixel_data = (uint8_t*)malloc(pixel_count);
-    if (!pixel_data) {
-        perror("Error allocating memory for pixel data");
-        exit(1);
-    }
-    return pixel_data;
-}
-
-
-// Main function: Read PPM file sequentially
-void read_ppm_file(const char* filename, int* width, int* height, uint8_t** pixel_rgb_data) {
+// Main function: Read PPM file sequentially.
+void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pixel_rgb_data, bool use_io_threading) {
     // Open and validate the file
     size_t file_size;
-    int fd = open_and_validate_file(filename, &file_size);
 
-    // Open file as FILE* for fread
-    FILE* file = fopen(filename, "rb");
-    if (!file) {
-        perror("Error opening file for reading");
-        close(fd);
-        exit(1);
+    int file_descriptor;
+    if ((file_descriptor = open_and_validate_file(file_name, &file_size)) == -1) {
+        goto cleanup;
     }
 
-    // Read the header into a buffer
-    char header_data[1024]; // Assume header fits within 1 KB
-    size_t header_read = fread(header_data, 1, sizeof(header_data), file);
-    if (header_read == 0) {
-        fprintf(stderr, "Error reading header data.\n");
-        fclose(file);
-        close(fd);
-        exit(1);
+    // Memory-map the file. Not necessarry for sequential implementation, but we wanted to make it uniform.
+    char* mapped_file;
+    if ((mapped_file = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0))
+        == MAP_FAILED) {
+        perror("Error mapping file.");
+        goto cleanup;
     }
 
     // Parse the header
     int max_val;
-    size_t header_size = parse_ppm_header(header_data, width, height, &max_val);
+    size_t header_size;
+    if ((header_size = parse_ppm_header(mapped_file, width, height, &max_val)) == -1) {
+        goto cleanup;
+    }
 
-    // Reposition the file pointer after the header
-    fseek(file, header_size, SEEK_SET);
+    size_t image_size = *width * *height;
+    size_t rgb_values = image_size * 3;
 
-    // Allocate memory for pixel data
-    *pixel_rgb_data = allocate_pixel_memory(*width, *height);
+    if (!(*pixel_rgb_data = malloc(rgb_values))) {
+        fprintf(stderr, "Error reading file: Could not allocate enough memory\n");
+        goto cleanup;
+    }
 
-    // Read pixel data
-    if (fread(*pixel_rgb_data, 1, (*width) * (*height) * 3, file) != (size_t)((*width) * (*height) * 3)) {
-        fprintf(stderr, "Error reading pixel data.\n");
-        free(*pixel_rgb_data);
-        fclose(file);
-        close(fd);
+    if (use_io_threading) {
+        int num_threads = 4;
+        pthread_t threads[num_threads];
+        ThreadData thread_data[num_threads];
+
+        size_t thread_section_size = (rgb_values + num_threads - 1) / num_threads;
+
+        for (int i = 0; i < num_threads; i++) {
+            thread_data[i].mapped_file = mapped_file;
+            thread_data[i].start = header_size + i * thread_section_size;
+            thread_data[i].size = (i == num_threads - 1) ? (rgb_values - i * thread_section_size) : thread_section_size;
+            thread_data[i].buffer = *pixel_rgb_data + i * thread_section_size;
+
+            pthread_create(&threads[i], NULL, read_thread_section, &thread_data[i]);
+        }
+
+        // Wait for threads to complete
+        for (int i = 0; i < num_threads; i++) {
+            pthread_join(threads[i], NULL);
+        }
+    } else {
+        memcpy(*pixel_rgb_data, mapped_file + header_size, rgb_values);
+    }
+
+    cleanup:
+    if (mapped_file) {
+        munmap(mapped_file, file_size);
+    }
+    if (file_descriptor) {
+        close(file_descriptor);
+    }
+}
+
+// Helper function: Open and validate file
+int open_and_validate_file(const char* file_name, size_t* file_size) {
+    int file_descriptor = open(file_name, O_RDONLY);
+
+    if (file_descriptor == -1) {
+        perror("Error opening file.");
         exit(1);
     }
 
-    fclose(file);
-    close(fd);
+    struct stat statbuf;
+
+    if (fstat(file_descriptor, &statbuf)) {
+        fprintf(stderr, "Error retrieving file stats\n");
+        return -1;
+    }
+
+    if (!S_ISREG(statbuf.st_mode) || statbuf.st_size <= 0) {
+        fprintf(stderr,
+                "Error processing file: Not a regular file or invalid size\n");
+        return -1;
+    }
+
+    *file_size = statbuf.st_size;
+    return file_descriptor;
 }
 
-void* read_chunk(void* arg) {
+size_t parse_ppm_header(char* file_data, int* width, int* height, int* max_val) {
+    char* file_start = file_data;
+
+    // Read magic number from ppm-file-header to check file format
+    char magicNumber[3];
+    // Magic number 2 first digits of ppm-file
+    sscanf(file_data, "%2s", magicNumber);
+
+    if (strcmp(magicNumber, "P6") != 0) {
+        fprintf(stderr, "Unsupported format. PPM file in binary format (P6) expected.\n");
+        return -1;
+    }
+    file_data = strchr(file_data, '\n') + 1;
+
+    if ((sscanf(file_data, "%d %d", width, height) <= 0)) {
+        fprintf(stderr, "Error trying to read image dimensions from PPM header.\n");
+        return -1;
+    }
+    file_data = strchr(file_data, '\n') + 1;
+
+    if ((sscanf(file_data, "%d", max_val)) <= 0) {
+        fprintf(stderr, "Error trying to read image max colour value from PPM header.\n");
+        return -1;
+    }
+    file_data = strchr(file_data, '\n') + 1;
+
+    // Return the size of the header
+    size_t header_size = file_data - file_start;
+    return header_size;
+}
+
+void* read_thread_section(void* arg) {
     ThreadData *data = (ThreadData *)arg;
 
     // Pointer to the start of the chunk in the memory-mapped file
@@ -121,128 +135,66 @@ void* read_chunk(void* arg) {
     return NULL;
 }
 
-
-// Main function: Read PPM file in parallel
-void read_ppm_file_parallel_mmap(const char* filename, int* width, int* height, uint8_t** pixel_rgb_data) {
-    // Open and validate the file
-    size_t file_size;
-    int fd = open_and_validate_file(filename, &file_size);
-
-    // Memory-map the file
-    char* mapped_file = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (mapped_file == MAP_FAILED) {
-        perror("Error mapping file");
-        close(fd);
-        exit(1);
-    }
-
-    // Parse the header
-    int max_val;
-    size_t header_size = parse_ppm_header(mapped_file, width, height, &max_val);
-
-    // Allocate memory for pixel data
-    *pixel_rgb_data = allocate_pixel_memory(*width, *height);
-
-    // Divide work among threads
-    int num_threads = 4; // Adjust based on system capabilities
-    pthread_t threads[num_threads];
-    ThreadData thread_data[num_threads];
-
-    size_t pixel_count = (*width) * (*height) * 3;
-    size_t chunk_size = (pixel_count + num_threads - 1) / num_threads;
-
-    for (int i = 0; i < num_threads; i++) {
-        thread_data[i].mapped_file = mapped_file;
-        thread_data[i].start = header_size + i * chunk_size;
-        thread_data[i].size = (i == num_threads - 1) ? (pixel_count - i * chunk_size) : chunk_size;
-        thread_data[i].buffer = *pixel_rgb_data + i * chunk_size;
-
-        pthread_create(&threads[i], NULL, read_chunk, &thread_data[i]);
-    }
-
-    // Wait for threads to complete
-    for (int i = 0; i < num_threads; i++) {
-        pthread_join(threads[i], NULL);
-    }
-
-    munmap(mapped_file, file_size);
-    close(fd);
-}
-
-// Write PGM file from data to filename
-void write_pgm_file(const char* filename, const uint8_t* data, int width, int height) {
-    FILE* file;
-
-    if (!(file = fopen(filename, "wb"))) {
-        perror("Error opening file");
-        return;
-    }
-
-    // Write header into output file
-    if ((fprintf(file, "P5\n%d %d\n255\n", width, height)) < 0) {
-        fprintf(stderr, "Error writing output file header.\n");
-        goto cleanup;
-    }
-
-    if (fwrite(data, 1, width * height, file) < (size_t)(width * height)) {
-        fprintf(stderr, "Error writing pixel data into output file.\n");
-        goto cleanup;
-    }
-
-    cleanup:
-    if (file) {
-        fclose(file);
-    }
-}
-
-void* write_chunk(void* arg) {
-    ThreadData_write *thread_data = (ThreadData_write *)arg;
-
-    if (pwrite(thread_data->fd, thread_data->data + thread_data->start, thread_data->size, thread_data->start) < 0) {
-        perror("Error writing chunk");
-    }
-
-    return NULL;
-}
-
-void write_pgm_file_parallel(const char* filename, const uint8_t* data, int width, int height){
-   // Open the file
-    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) {
-        perror("Error opening file");
+// Write PGM file from sobel_data to filename
+void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, int height, bool use_io_threading) {
+    size_t image_size = width * height;
+    // Open the file
+    int file_descriptor = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (file_descriptor < 0) {
+        perror("Error opening file.");
         return;
     }
 
     // Write the header
     char header[128];
     int header_size = snprintf(header, sizeof(header), "P5\n%d %d\n255\n", width, height);
-    if (write(fd, header, header_size) < 0) {
-        perror("Error writing header");
-        close(fd);
-        return;
+    if (write(file_descriptor, header, header_size) < 0) {
+        perror("Error writing header.");
+        goto cleanup;
     }
 
-    int num_threads = 4;
-    // Divide the data into chunks
-    size_t total_size = width * height;
-    size_t chunk_size = (total_size + num_threads - 1) / num_threads;
+    if (use_io_threading) {
+        int num_threads = 4;
+        // Divide the sobel_data into chunks
+        size_t thread_section_size = (image_size + num_threads - 1) / num_threads;
 
-    
-    pthread_t threads[num_threads];
-    ThreadData_write thread_data[num_threads];
+        pthread_t threads[num_threads];
+        ThreadData_write thread_data[num_threads];
 
-    for (int i = 0; i < num_threads; i++) {
-        thread_data[i].data = data;
-        thread_data[i].start = header_size + i * chunk_size;
-        thread_data[i].size = (i == num_threads - 1) ? (total_size - i * chunk_size) : chunk_size;
-        thread_data[i].fd = fd;
+        for (int i = 0; i < num_threads; i++) {
+            thread_data[i].data = sobel_data;
+            thread_data[i].start = i * thread_section_size;
+            thread_data[i].size = (i == num_threads - 1) ? (image_size - i * thread_section_size) : thread_section_size;
+            thread_data[i].file_descriptor = file_descriptor;
+            thread_data[i].header_offset = header_size;
 
-        pthread_create(&threads[i], NULL, write_chunk, &thread_data[i]);
+            pthread_create(&threads[i], NULL, write_thread_section, &thread_data[i]);
+        }
+
+        for (int i = 0; i < num_threads; i++) {
+            pthread_join(threads[i], NULL);
+        }
+    } else {
+        if (pwrite(file_descriptor, sobel_data, image_size, header_size) < 0) {
+            fprintf(stderr, "Error writing pixel sobel_data into output file.\n");
+            goto cleanup;
+        }
     }
 
-    for (int i = 0; i < num_threads; i++) {
-        pthread_join(threads[i], NULL);
+    cleanup:
+    if (file_descriptor) {
+        close(file_descriptor);
+    }
+}
+
+void* write_thread_section(void* arg) {
+    ThreadData_write *thread_data = (ThreadData_write *)arg;
+
+    if (pwrite(thread_data->file_descriptor, thread_data->data + thread_data->start,
+               thread_data->size, thread_data->start + thread_data->header_offset) < 0) {
+        fprintf(stderr, "Error writing pixel data into output file.\n");
+        exit(1);
     }
 
-    close(fd);
+    return NULL;
 }
