@@ -9,6 +9,7 @@
 
 
 int main(int argc, char* argv[]) {
+
     struct ParsedArgs args;
     size_t repetitions = 1;
 
@@ -75,8 +76,8 @@ int main(int argc, char* argv[]) {
 
     // Write result to PGM
     if (args.output_file != NULL){
-        write_pgm_file(args.output_file, result, width, height, false);}
-    else {
+        write_pgm_file(args.output_file, result, width, height, true);
+    } else {
         args.output_file = malloc(strlen(args.input_file) + 1 );
         if (args.output_file == NULL) {
             fprintf(stderr, "Memory allocation failed.\n");
@@ -87,7 +88,7 @@ int main(int argc, char* argv[]) {
         if (dot != NULL) {
             strcpy(dot, ".pgm"); // Replace the extension
         }
-            write_pgm_file(args.output_file, result, width, height, true);
+            write_pgm_file(args.output_file, result, width, height, false);
     }
 
     // Free memory

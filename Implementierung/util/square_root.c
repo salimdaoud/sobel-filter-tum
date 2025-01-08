@@ -1,10 +1,7 @@
 #include "square_root.h"
 #include "lookup_tables.h"
 
-#include <inttypes.h>
 #include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
 
 uint8_t squareroot_lookup (int value) {
     int middle = 0;
@@ -22,7 +19,6 @@ uint8_t squareroot_lookup (int value) {
         lower = 192;
         higher = 255;
     }
-
 
     while (lower <= higher) {
         middle = (lower + higher) / 2;
