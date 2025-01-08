@@ -174,7 +174,7 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
                 bot_left =  _mm_and_si128(bot_left, zero_mask_first_int);
             }
 
-            if (gray_x >= width - 4) {
+            if (__builtin_expect (gray_x >= width - 4, 0)) {
                 if (gray_x == width - 3) {
                     top =           _mm_and_si128(top, zero_mask_last_int);
                     bot =           _mm_and_si128(bot, zero_mask_last_int);
@@ -224,15 +224,25 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
             __m128i squared_vert = _mm_mullo_epi32(gradient_vert, gradient_vert);
             __m128i squared_hor = _mm_mullo_epi32(gradient_hor, gradient_hor);
             __m128i squared_sum = _mm_add_epi32(squared_vert, squared_hor);
-            __m128 squared_sum_float = _mm_cvtepi32_ps(squared_sum);
-            __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
 
-            // Clamp to 255 and convert to 8-bit integer
-            __m128i gradient_i = _mm_cvtps_epi32(_mm_min_ps(_mm_set1_ps(255.0f), gradient_float));
-            __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
-            __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
+            __m128i threshold = _mm_set1_epi32(65025);
+            __m128i cmp_result = _mm_cmpgt_epi32(squared_sum, threshold);
 
-            _mm_storel_epi64((__m128i*)(result + row_offset + gray_x), pack_8);
+            if (__builtin_expect(_mm_test_all_ones(cmp_result), 0)) {
+                __m128i max_value = _mm_set1_epi8(255);
+                _mm_storel_epi64((__m128i*)(result + row_offset + gray_x), max_value);
+            } else {
+                // Convert to float and compute the square root
+                __m128 squared_sum_float = _mm_cvtepi32_ps(squared_sum);
+                __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
+
+                // Clamp to 255 and convert to 8-bit integer
+                __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
+                __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
+                __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
+
+                _mm_storel_epi64((__m128i*)(result + row_offset + gray_x), pack_8);
+            }
 
         }
         image_row_prev += width;
@@ -303,7 +313,7 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
         __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
 
         // Clamp to 255 and convert to 8-bit integer
-        __m128i gradient_i = _mm_cvtps_epi32(_mm_min_ps(_mm_set1_ps(255.0f), gradient_float));
+        __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
         __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
         __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
 
