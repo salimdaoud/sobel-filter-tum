@@ -10,25 +10,7 @@ void assert_int_equal(int expected, int actual);
 
 
 
-void test_sobel_naive (void);
 
-void test_sobel_kernel_unroll(void);
 
-void test_sobel_SIMD(void);
 
-void test_sobel_squareroot_lookup (void);
-
-void test_sobel_separated_convolution (void);
-
-void test_parse_ppm_header_correct_header(void);
-
-void test_parse_ppm_header_incorrect_header(void);
-
-void test_read_ppm_correct_file(void);
-
-void test_read_ppm_correct_file_parallel(void);
-
-void test_read_ppm_incorrcet_file(void);
-
-void test_write_pgm_file(void);
 
