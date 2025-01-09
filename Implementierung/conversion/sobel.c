@@ -48,7 +48,7 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
             }
 
             // Compute gradient magnitude
-            int magnitude = (int) sqrt(sum_vertical * sum_vertical + sum_horizontal * sum_horizontal);
+            int magnitude = (int) sqrtf(sum_vertical * sum_vertical + sum_horizontal * sum_horizontal);
             if (magnitude > 255) {
                 magnitude = 255;
             }
@@ -84,27 +84,28 @@ void sobel_kernel_unroll( const uint8_t* img, size_t width, size_t height,
     for (size_t gray_y = 0; gray_y < height; gray_y++) {
         for (size_t gray_x = 0; gray_x < width; gray_x++) {
             int gradient_vert = 0, gradient_hor = 0;
+            size_t last_row = height - 1;
+            size_t last_column = width - 1;
             uint8_t top_left =  (gray_y > 0 && gray_x > 0) ? image_row_prev[gray_x - 1] : 0;
             uint8_t top =       (gray_y > 0) ? image_row_prev[gray_x] : 0;
-            uint8_t top_right = (gray_y > 0 && gray_x < width - 1) ? image_row_prev[gray_x + 1] : 0;
+            uint8_t top_right = (gray_y > 0 && gray_x < last_column) ? image_row_prev[gray_x + 1] : 0;
             uint8_t left =      (gray_x > 0) ? image_row_now[gray_x - 1] : 0;
-            uint8_t right =     (gray_x < width - 1) ? image_row_now[gray_x + 1] : 0;
-            uint8_t bot_left =  (gray_y < height - 1 && gray_x > 0) ? image_row_next[gray_x - 1] : 0;
-            uint8_t bottom =    (gray_y < height - 1) ? image_row_next[gray_x] : 0;
-            uint8_t bot_right = (gray_y < height - 1 && gray_x < width - 1) ? image_row_next[gray_x + 1] : 0;
+            uint8_t right =     (gray_x < last_column) ? image_row_now[gray_x + 1] : 0;
+            uint8_t bot_left =  (gray_y < last_row && gray_x > 0) ? image_row_next[gray_x - 1] : 0;
+            uint8_t bottom =    (gray_y < last_row) ? image_row_next[gray_x] : 0;
+            uint8_t bot_right = (gray_y < last_row && gray_x < last_column) ? image_row_next[gray_x + 1] : 0;
 
             // Calculate gradient_vert and gradient_hor
-            gradient_vert = top_left - top_right +
-                            (left << 1) - (right << 1) +
-                            bot_left - bot_right;
+            gradient_vert = top_left + (left << 1) + bot_left
+                            - top_right - (right << 1) - bot_right;
 
-            gradient_hor = top_left + (top << 1) + top_right -
-                           bot_left - (bottom << 1) - bot_right;
+            gradient_hor = top_left + (top << 1) + top_right
+                            - bot_left - (bottom << 1) - bot_right;
 
             int sum = gradient_vert * gradient_vert + gradient_hor * gradient_hor;
             uint8_t magnitude;
             if (sum < 65025) {
-                magnitude = sqrt(sum);
+                magnitude = sqrtf(sum);
             } else {
                 magnitude = 255;
             }
@@ -174,7 +175,7 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
                 bot_left =  _mm_and_si128(bot_left, zero_mask_first_int);
             }
 
-            if (__builtin_expect (gray_x >= width - 4, 0)) {
+            if (gray_x >= width - 4) {
                 if (gray_x == width - 3) {
                     top =           _mm_and_si128(top, zero_mask_last_int);
                     bot =           _mm_and_si128(bot, zero_mask_last_int);
@@ -436,14 +437,18 @@ void sobel_separated_convolution( const uint8_t* img, size_t width, size_t heigh
     // Grayscale conversion
     img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
 
-    size_t size = width * height;
+    size_t image_size = width * height;
 
-    int* temporary_sum = malloc((size) * sizeof(int));
-    int* temporary_sum_2 = malloc((size) * sizeof(int));
-    int* temporary_sum_3 = malloc((size) * sizeof(int));
+    int* temporary_sum = malloc((image_size) * sizeof(int));
+    int* temporary_sum_2 = malloc((image_size) * sizeof(int));
+
+    int* temporary_sum_start = temporary_sum;
+    int* temporary_sum_2_start = temporary_sum_2;
+    uint8_t* result_start = result;
+
 
     size_t row_indices[height];
-    int row = 0;
+    size_t current_pixel = 0;
     int sum = 0;
     int sum2 = 0;
 
@@ -459,53 +464,92 @@ void sobel_separated_convolution( const uint8_t* img, size_t width, size_t heigh
         for (size_t gray_x = 0; gray_x < width; gray_x++) {
             sum = 0;
             sum2 = 0;
-            row = row_indices[gray_y];
+            current_pixel = row_indices[gray_y] + gray_x;
             if (gray_x > 0) {
-                sum = grayscale_image[row + gray_x - 1];
-                sum2 = -grayscale_image[row + gray_x - 1];
+                sum = grayscale_image[current_pixel - 1];
+                sum2 = -grayscale_image[current_pixel - 1];
             }
-            sum += (grayscale_image[row + gray_x] << 1);
+            sum += (grayscale_image[current_pixel] << 1);
             if (gray_x + 1 < width) {
-                sum += grayscale_image[row + gray_x + 1];
-                sum2 += grayscale_image[row + gray_x + 1];
+                sum += grayscale_image[current_pixel + 1];
+                sum2 += grayscale_image[current_pixel + 1];
             }
-            temporary_sum[row + gray_x] = sum;
-            temporary_sum_2[row + gray_x] = sum2;
+            *temporary_sum++ = sum;
+            *temporary_sum_2++ = sum2;
         }
     }
 
-    for (size_t gray_y = 0; gray_y < height; gray_y++) {
+    temporary_sum = temporary_sum_start;
+    temporary_sum_2 = temporary_sum_2_start;
+
+
+        //loop unroll for first row
+    for (size_t gray_x = 0; gray_x < width; gray_x++) {
+        sum = 0;
+        sum2 = 0;
+
+        sum2 += (temporary_sum_2[gray_x] << 1);
+
+        sum += temporary_sum[gray_x + width];
+        sum2 += temporary_sum_2[gray_x + width];
+
+        int pixel_sum = sum * sum + sum2 * sum2;
+        if (pixel_sum < 65025) {
+            *result++ = (uint8_t) sqrtf(pixel_sum);
+        } else {
+            *result++ = 255;
+        }
+    }
+
+    for (size_t gray_y = 1; gray_y < height - 1; gray_y++) {
         for (size_t gray_x = 0; gray_x < width; gray_x++) {
             sum = 0;
             sum2 = 0;
-            row = row_indices[gray_y];
-            if (gray_y > 0) {
-                sum = -temporary_sum[row - width + gray_x];
-                sum2 = temporary_sum_2[row - width + gray_x];
+            current_pixel = row_indices[gray_y] + gray_x;
+
+            sum = -temporary_sum[current_pixel - width];
+            sum2 = temporary_sum_2[current_pixel - width];
+
+            sum2 += (temporary_sum_2[current_pixel] << 1);
+
+            sum += temporary_sum[current_pixel + width];
+            sum2 += temporary_sum_2[current_pixel + width];
+
+            int pixel_sum = sum * sum + sum2 * sum2;
+            if (pixel_sum < 65025) {
+                *result++ = (uint8_t) sqrtf(pixel_sum);
+            } else {
+                *result++ = 255;
             }
-            sum2 += (temporary_sum_2[row + gray_x] << 1);
-            if (gray_y + 1 < height) {
-                sum += temporary_sum[row + width + gray_x];
-                sum2 += temporary_sum_2[row + width + gray_x];
-            }
-            temporary_sum_3[row + gray_x] = sum * sum + sum2 * sum2;
         }
     }
 
-    for (size_t i = 0; i < size; i++) {
-        if (temporary_sum_3[i] < 65025) {
-            result[i] = (uint8_t) sqrt(temporary_sum_3[i]);
+        // loop unroll for last row
+    for (size_t gray_x = 0; gray_x < width; gray_x++) {
+        sum = 0;
+        sum2 = 0;
+        current_pixel = row_indices[height - 1] + gray_x;
+
+        sum = -temporary_sum[current_pixel - width];
+        sum2 = temporary_sum_2[current_pixel - width];
+
+        sum2 += (temporary_sum_2[current_pixel] << 1);
+
+        int pixel_sum = sum * sum + sum2 * sum2;
+        if (pixel_sum < 65025) {
+            *result++ = (uint8_t) sqrtf(pixel_sum);
         } else {
-            result[i] = 255;
+            *result++ = 255;
         }
-
     }
+
 
     if(benchmark_flag) {
         end_time_measurement("Sobel Separated Convolution");
     }
 
+    result = result_start;
+
     free(temporary_sum);
     free(temporary_sum_2);
-    free(temporary_sum_3);
 }
