@@ -88,9 +88,9 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     
 
     // Display parsed values
-    printf("Implementation version: %d\n", args->version_flag);
+    printf("Implementation version: %ld\n", args->version_flag);
     if (args->benchmark_flag) {
-        printf("Runtime measurement enabled with %d repetitions\n", args->repetitions);
+        printf("Runtime measurement enabled with %ld repetitions\n", args->repetitions);
     }
     printf("Input file: %s\n", args->input_file);
     if (args->output_file) {

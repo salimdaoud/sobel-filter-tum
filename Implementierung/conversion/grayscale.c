@@ -23,7 +23,6 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
     __m128 weight_r = _mm_set1_ps(a);        // [a, a, a, a]
     __m128 weight_g = _mm_set1_ps(b);        // [b, b, b, b]
     __m128 weight_b = _mm_set1_ps(c);        // [c, c, c, c]
-    __m128 weight_sum = _mm_set1_ps(a + b + c); // [a+b+c, a+b+c, a+b+c, a+b+c]
     size_t i = 0;
     size_t simd_pixels = total_pixels - (total_pixels % 4); // Process in chunks of 4 pixels
 

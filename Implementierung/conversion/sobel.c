@@ -48,7 +48,7 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
             }
 
             // Compute gradient magnitude
-            int magnitude = (int) sqrtf(sum_vertical * sum_vertical + sum_horizontal * sum_horizontal);
+            int magnitude = (int) sqrt(sum_vertical * sum_vertical + sum_horizontal * sum_horizontal);
             if (magnitude > 255) {
                 magnitude = 255;
             }
@@ -105,7 +105,7 @@ void sobel_kernel_unroll( const uint8_t* img, size_t width, size_t height,
             int sum = gradient_vert * gradient_vert + gradient_hor * gradient_hor;
             uint8_t magnitude;
             if (sum < 65025) {
-                magnitude = sqrtf(sum);
+                magnitude = sqrt(sum);
             } else {
                 magnitude = 255;
             }
@@ -495,7 +495,7 @@ void sobel_separated_convolution( const uint8_t* img, size_t width, size_t heigh
 
         int pixel_sum = sum * sum + sum2 * sum2;
         if (pixel_sum < 65025) {
-            *result++ = (uint8_t) sqrtf(pixel_sum);
+            *result++ = (uint8_t) sqrt(pixel_sum);
         } else {
             *result++ = 255;
         }
@@ -517,7 +517,7 @@ void sobel_separated_convolution( const uint8_t* img, size_t width, size_t heigh
 
             int pixel_sum = sum * sum + sum2 * sum2;
             if (pixel_sum < 65025) {
-                *result++ = (uint8_t) sqrtf(pixel_sum);
+                *result++ = (uint8_t) sqrt(pixel_sum);
             } else {
                 *result++ = 255;
             }
@@ -537,7 +537,7 @@ void sobel_separated_convolution( const uint8_t* img, size_t width, size_t heigh
 
         int pixel_sum = sum * sum + sum2 * sum2;
         if (pixel_sum < 65025) {
-            *result++ = (uint8_t) sqrtf(pixel_sum);
+            *result++ = (uint8_t) sqrt(pixel_sum);
         } else {
             *result++ = 255;
         }

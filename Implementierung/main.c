@@ -12,7 +12,7 @@
 int main(int argc, char* argv[]) {
 
     struct ParsedArgs args;
-    size_t repetitions = args.repetitions;
+    size_t repetitions = 1; //args.repetitions TODO: fix arg parser
 
     // Parse arguments
     if (arg_parser(argc, argv, &args) == -1) {
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    for (size_t i = 0; i < 15; i++) {
+    for (size_t i = 0; i < repetitions; i++) {
         switch (args.version_flag) {
             case 1:
                 printf("Squareroot lookup Sobel implementation used.\n");
