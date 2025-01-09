@@ -33,18 +33,18 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     
     while ((opt = getopt_long(argc, argv, "V:B::v:b:o:h", long_options, &option_index)) != -1){
         switch (opt){
-            case 'v': case 'V': //Implementation version
+            case 'v': case 'V':
                 if (optarg != NULL){
                     char* endptr;
-                    args->version_flag = (int) strtol(optarg, &endptr, 10);
+                    args->version_flag = (size_t) strtol(optarg, &endptr, 10);
                 }
                 else {args->version_flag = 0;}
                 break;
-            case 'b': case 'B': // Runtime measurement
+            case 'b': case 'B':
                 args->benchmark_flag = 1;
                 if (optarg != NULL){
                     char* endptr;
-                    args->repetitions = (int) strtol(optarg, &endptr, 10);
+                    args->repetitions = (size_t) strtol(optarg, &endptr, 10);
                 }
                 break;
             case 'o': // Output file
@@ -53,7 +53,7 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
                 }
                 // is an error required if there is no optarg?
                 break;
-            case 'h': // Help message
+            case 'h':
                 print_help();
                 exit(0);
             case 0: // Long options like --rgb_coeffs
@@ -66,7 +66,6 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
                                         // and there are three floating point arguments
                     }
                     char* endptr;
-                    // because when counting in an array, we start by 0 as index
                     args->rgb_coeffs[0] = strtod(argv[optind - 1], &endptr);
                     args->rgb_coeffs[1] = strtod(argv[optind], &endptr);
                     args->rgb_coeffs[2] = strtod(argv[optind + 1], &endptr);

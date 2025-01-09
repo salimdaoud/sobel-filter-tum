@@ -10,7 +10,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
         goto cleanup;
     }
 
-    // Memory-map the file. Not necessarry for sequential implementation, but we wanted to make it uniform.
+    // Memory-map the file. Not necessary for sequential implementation, but we wanted to make it uniform.
     char* mapped_file;
     if ((mapped_file = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0))
         == MAP_FAILED) {
@@ -25,8 +25,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
         goto cleanup;
     }
 
-    size_t image_size = *width * *height;
-    size_t rgb_values = image_size * 3;
+   size_t rgb_values = *width * *height * 3;
 
     if (!(*pixel_rgb_data = malloc(rgb_values))) {
         fprintf(stderr, "Error reading file: Could not allocate enough memory\n");

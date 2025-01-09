@@ -32,25 +32,22 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
     }
 
     for (; i < simd_pixels; i+=4){
-        __m128 r = _mm_set_ps(
-            (float)img[i * 3 + 9], (float)img[i * 3 + 6],
-            (float)img[i * 3 + 3], (float)img[i * 3]);
-        __m128 g = _mm_set_ps(
-            (float)img[i * 3 + 10], (float)img[i * 3 + 7],
-            (float)img[i * 3 + 4], (float)img[i * 3 + 1]);
-        __m128 b = _mm_set_ps(
-            (float)img[i * 3 + 11], (float)img[i * 3 + 8],
-            (float)img[i * 3 + 5], (float)img[i * 3 + 2]);
+        __m128 red = _mm_set_ps(
+                (float)img[i * 3 + 9], (float)img[i * 3 + 6],
+                (float)img[i * 3 + 3], (float)img[i * 3]);
+        __m128 blue = _mm_set_ps(
+                (float)img[i * 3 + 10], (float)img[i * 3 + 7],
+                (float)img[i * 3 + 4], (float)img[i * 3 + 1]);
+        __m128 green = _mm_set_ps(
+                (float)img[i * 3 + 11], (float)img[i * 3 + 8],
+                (float)img[i * 3 + 5], (float)img[i * 3 + 2]);
 
-        __m128 weighted_r = _mm_mul_ps(r, weight_r); // a * R
-        __m128 weighted_g = _mm_mul_ps(g, weight_g); // b * G
-        __m128 weighted_b = _mm_mul_ps(b, weight_b); // c * B
-
-        __m128 sum = _mm_add_ps(_mm_add_ps(weighted_r, weighted_g), weighted_b); // (a * R + b * G + c * B)
-        __m128 grayscale = _mm_div_ps(sum, weight_sum); // Normalize by (a + b + c)
+        __m128 weighted_red = _mm_mul_ps(red, weight_r);
+        __m128 weighted_blue = _mm_mul_ps(blue, weight_g);
+        __m128 weighted_green = _mm_mul_ps(green, weight_b);
 
         // Convert floating-point grayscale values to integers
-        __m128i grayscale_int = _mm_cvttps_epi32(grayscale); // [G1, G2, G3, G4]
+        __m128i grayscale_int = _mm_cvttps_epi32(_mm_add_ps(weighted_red, _mm_add_ps(weighted_blue, weighted_green))); // [G1, G2, G3, G4]
 
         // Extract the grayscale values and store them
         gray[i + 0] = (uint8_t)_mm_extract_epi16(grayscale_int, 0);
@@ -63,7 +60,7 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
     for (; i < total_pixels; i++) {
         size_t idx = i * 3; // Each pixel has 3 components (R, G, B)
         gray[i] = (uint8_t)((a * img[idx] + b * img[idx + 1] + c * img[idx + 2]) / (a + b + c));
-        }
+    }
 
     if(benchmark_flag) {
         end_time_measurement("SIMD Grayscaling");
