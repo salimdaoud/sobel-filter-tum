@@ -11,7 +11,7 @@
 int main(int argc, char* argv[]) {
 
     struct ParsedArgs args;
-    size_t repetitions = 1;
+    size_t repetitions = args.repetitions;
 
     // Parse arguments
     if (arg_parser(argc, argv, &args) == -1) {
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    for (size_t i = 0; i < repetitions; i++) {
+    for (size_t i = 0; i < 15; i++) {
         switch (args.version_flag) {
             case 1:
                 printf("Squareroot lookup Sobel implementation used.\n");
@@ -56,9 +56,18 @@ int main(int argc, char* argv[]) {
                                     b_value_weighted, tmp, result, args.benchmark_flag);
                 break;
             case 3:
-                printf("SIMD Sobel implementation used.\n");
-                sobel_SIMD(rgbData, width, height, r_value_weighted, g_value_weighted,
-                           b_value_weighted, tmp, result, args.benchmark_flag);
+                if (width >= 4) {
+                    printf("SIMD Sobel implementation used.\n");
+                    sobel_SIMD(rgbData, width, height, r_value_weighted, g_value_weighted,
+                               b_value_weighted, tmp, result, args.benchmark_flag);
+                } else {
+                    printf("Image pixel width is too small. Using SIMD does not make sense.\n"
+                           "Standard Sobel implementation used.\n");
+                    sobel_naive(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                b_value_weighted, tmp, result, args.benchmark_flag);
+                    break;
+                }
+
                 break;
             case 4:
                 printf("Separated Convolution Sobel implementation used.\n");

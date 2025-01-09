@@ -1,11 +1,8 @@
 #include "square_root.h"
-#include "lookup_tables.h"
-
-#include <stdint.h>
 
 uint8_t squareroot_lookup (int value) {
     int middle = 0;
-    root_interval cmp_interval = { 0, 0, 0};
+    root_interval cmp_interval = {0, 0, 0};
     int lower;
     int higher;
 
