@@ -5,7 +5,7 @@
 #include "conversion/sobel.h"
 #include "io/arg_parser.h"
 #include "util/time_measurement.h"
-#include "testing/test.h"
+#include "test/test.h"
 
 
 
