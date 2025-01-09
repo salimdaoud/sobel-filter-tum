@@ -50,7 +50,7 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
         __m128 grayscale = _mm_div_ps(sum, weight_sum); // Normalize by (a + b + c)
 
         // Convert floating-point grayscale values to integers
-        __m128i grayscale_int = _mm_cvtps_epi32(grayscale); // [G1, G2, G3, G4]
+        __m128i grayscale_int = _mm_cvttps_epi32(grayscale); // [G1, G2, G3, G4]
 
         // Extract the grayscale values and store them
         gray[i + 0] = (uint8_t)_mm_extract_epi16(grayscale_int, 0);

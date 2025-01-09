@@ -20,7 +20,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
 
     // Parse the header
     int max_val;
-    size_t header_size;
+    int header_size;
     if ((header_size = parse_ppm_header(mapped_file, width, height, &max_val)) == -1) {
         goto cleanup;
     }

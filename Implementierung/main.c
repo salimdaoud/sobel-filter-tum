@@ -108,6 +108,13 @@ int main(int argc, char* argv[]) {
     test_sobel_SIMD();
     test_sobel_squareroot_lookup();
     test_sobel_separated_convolution();
+    test_parse_ppm_header_correct_header();
+    test_parse_ppm_header_incorrect_header();
+    test_read_ppm_correct_file();
+    test_read_ppm_correct_file_parallel();
+    test_read_ppm_incorrcet_file();
+    test_write_pgm_file();
+    
     
     return 0;
 

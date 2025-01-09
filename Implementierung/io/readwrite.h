@@ -1,5 +1,9 @@
 #ifndef READWRITE_H
 #define READWRITE_H
+#define _POSIX_C_SOURCE 200809L
+
+#include <unistd.h>
+
 
 #include <stddef.h>
 #include <stdint-gcc.h>
