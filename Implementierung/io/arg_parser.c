@@ -8,6 +8,7 @@ void print_help() {
     printf("  -o <Dateiname>       Specify output file\n");
     printf("  --rgb_coeffs <a> <b> <c> Set coefficients a, b, and c for conversion\n");
     printf("  -h, --help           Show this help message and exit\n");
+    printf("  -t                   enable all tests\n");
 }
 
 int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
@@ -17,6 +18,7 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     // Default values
     args->version_flag = 0;
     args->benchmark_flag = 0;
+    args->test_flag = 0;
     args->repetitions = 1;
     args->input_file = NULL;
     args->output_file = NULL;
@@ -31,7 +33,7 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     };
   
     
-    while ((opt = getopt_long(argc, argv, "V:B::v:b:o:h", long_options, &option_index)) != -1){
+    while ((opt = getopt_long(argc, argv, "V:B:T::v:b:o:h:t", long_options, &option_index)) != -1){
         switch (opt){
             case 'v': case 'V':
                 if (optarg != NULL){
@@ -56,6 +58,9 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
             case 'h':
                 print_help();
                 exit(0);
+            case 't' : case 'T':
+                args->test_flag = 1;
+                break; 
             case 0: // Long options like --rgb_coeffs
 
                 //getopt_long updates option_index automatically when a long option is successfully matched.

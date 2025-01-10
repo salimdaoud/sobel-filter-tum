@@ -6,6 +6,11 @@
 #include "io/arg_parser.h"
 #include "util/time_measurement.h"
 #include "test/test.h"
+#include "test/grayscale_test.h"
+#include "test/sobel_test.h"
+#include "test/readwrite_test.h"
+
+
 
 
 
@@ -107,23 +112,25 @@ int main(int argc, char* argv[]) {
     free(tmp);
     free(result);
 
-
-    test_img_to_grayscale_naive();
-    test_img_to_grayscale_naive_little_weights();
-    test_img_to_grayscale_SIMD();
-    test_img_to_grayscale();
-    test_img_to_grayscale_bitshift();
-    test_sobel_naive();
-    test_sobel_kernel_unroll();
-    test_sobel_SIMD();
-    test_sobel_squareroot_lookup();
-    test_sobel_separated_convolution();
-    test_parse_ppm_header_correct_header();
-    test_parse_ppm_header_incorrect_header();
-    test_read_ppm_correct_file();
-    test_read_ppm_correct_file_parallel();
-    test_read_ppm_incorrcet_file();
-    test_write_pgm_file();
+    if (args.test_flag) {
+        test_img_to_grayscale_naive();
+        test_img_to_grayscale_naive_little_weights();
+        test_img_to_grayscale_SIMD();
+        test_img_to_grayscale();
+        test_img_to_grayscale_bitshift();
+        test_sobel_naive();
+        test_sobel_kernel_unroll();
+        test_sobel_SIMD();
+        test_sobel_squareroot_lookup();
+        test_sobel_separated_convolution();
+        test_parse_ppm_header_correct_header();
+        test_parse_ppm_header_incorrect_header();
+        test_read_ppm_correct_file();
+        test_read_ppm_correct_file_parallel();
+        test_read_ppm_incorrcet_file();
+        test_write_pgm_file();
+        test_read_ppm_incorrcet_file_maxval();
+    }
     
     
     return 0;
