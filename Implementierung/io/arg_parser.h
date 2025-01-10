@@ -6,6 +6,7 @@
 struct ParsedArgs {
     size_t version_flag;
     _Bool benchmark_flag;
+    _Bool test_flag;
     size_t repetitions;
     char *input_file;
     char *output_file;

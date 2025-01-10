@@ -37,7 +37,6 @@ typedef struct {
 
 int open_and_validate_file(const char* file_name, size_t* file_size);
 
-
 size_t parse_ppm_header(char* file_data, int* width, int* height, int* max_val);
 
 void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pixel_rgb_data, bool use_io_threading);

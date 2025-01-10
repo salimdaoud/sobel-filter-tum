@@ -16,4 +16,6 @@ void test_read_ppm_incorrcet_file(void);
 
 void test_write_pgm_file(void);
 
+void test_read_ppm_incorrcet_file_maxval(void);
+
 #endif

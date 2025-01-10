@@ -1,5 +1,6 @@
 #include "readwrite.h"
 
+
 // Main function: Read PPM file sequentially.
 void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pixel_rgb_data, bool use_io_threading) {
     // Open and validate the file
@@ -24,8 +25,16 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     if ((header_size = parse_ppm_header(mapped_file, width, height, &max_val)) == -1) {
         goto cleanup;
     }
+    
+    if (max_val < 0 || max_val > 255) {
+        fprintf (stderr, "Failed! Provided file : %s is not a regular PPM image. Non valid max_val.\n", file_name);
+        goto cleanup;
+    }
 
    size_t rgb_values = *width * *height * 3;
+   if (file_size !=  rgb_values + header_size) {
+        fprintf(stderr, "Failed! Provided file %s is not a regular PPM image. Number of pixels is ambiguous.\n", file_name);
+    }
 
     if (!(*pixel_rgb_data = malloc(rgb_values))) {
         fprintf(stderr, "Error reading file: Could not allocate enough memory\n");
@@ -63,6 +72,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     if (file_descriptor) {
         close(file_descriptor);
     }
+
 }
 
 // Helper function: Open and validate file

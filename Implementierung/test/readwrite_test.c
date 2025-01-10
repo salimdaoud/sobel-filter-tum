@@ -17,7 +17,7 @@ void test_parse_ppm_header_incorrect_header(void) {
 }
 
 void test_read_ppm_correct_file(void) {
-    char file_data[] =  "Test/binary_correct_file.ppm";
+    char file_data[] =  "test/binary_correct_file.ppm";
     int width, height;
     uint8_t* pixel_rgb_data;
     read_ppm_file(file_data, &width, &height, &pixel_rgb_data, 0);
@@ -32,7 +32,7 @@ void test_read_ppm_correct_file(void) {
 }
 
 void test_read_ppm_correct_file_parallel(void) {
-    char file_data[] =  "Test/binary_correct_file.ppm";
+    char file_data[] =  "test/binary_correct_file.ppm";
     int width, height;
     uint8_t* pixel_rgb_data;
     read_ppm_file(file_data, &width, &height, &pixel_rgb_data, 1);
@@ -48,7 +48,7 @@ void test_read_ppm_correct_file_parallel(void) {
 
 //width and height do not correspond to given pixels
 void test_read_ppm_incorrcet_file(void) {
-    char file_data[] =  "Test/binary_incorrect_file.ppm";
+    char file_data[] =  "test/binary_incorrect_file.ppm";
     int width, height;
     uint8_t* pixel_rgb_data;
     read_ppm_file(file_data, &width, &height, &pixel_rgb_data, 0);
@@ -62,8 +62,25 @@ void test_read_ppm_incorrcet_file(void) {
     }*/
 }
 
+//max_val is is less than 0 or greater 255 
+void test_read_ppm_incorrcet_file_maxval(void) {
+    char file_data[] =  "test/binary_incorrect_file_maxval.ppm";
+    int width, height;
+    uint8_t* pixel_rgb_data;
+    read_ppm_file(file_data, &width, &height, &pixel_rgb_data, 0);
+    uint8_t expected_pixels [] = {10, 20, 30, 50, 60, 70, 80, 90, 100,
+                                  110, 5, 15, 25, 40, 59, 70, 4, 2,
+                                  11, 12, 76, 80, 95, 48, 35, 74, 55,
+    };
+    assert_uint8_array_equal(expected_pixels, pixel_rgb_data, 27);
+    /*for (int i=0; i < 27; i++){
+        printf("%d\n", pixel_rgb_data[i]);
+    }*/
+}
+
+
 void test_write_pgm_file(void) {
-    char file_name[] = "Test/binary_write_file.pgm";
+    char file_name[] = "test/binary_write_file.pgm";
     int width = 3;
     int height = 3;
     uint8_t sobel_pixels[] = {
