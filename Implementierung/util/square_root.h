@@ -9,6 +9,7 @@
 
 #include "lookup_tables.h"
 
+uint8_t squareroot_simple(int value);
 
 uint8_t squareroot_lookup(int value);
 

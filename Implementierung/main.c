@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    for (size_t i = 0; i < repetitions; i++) {
+    for (size_t i = 0; i < args.repetitions; i++) {
         switch (args.version_flag) {
             case 1:
                 printf("Squareroot lookup Sobel implementation used.\n");

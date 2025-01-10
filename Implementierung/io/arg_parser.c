@@ -31,7 +31,7 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
     };
   
     
-    while ((opt = getopt_long(argc, argv, "V:B::v:b:o:h", long_options, &option_index)) != -1){
+    while ((opt = getopt_long(argc, argv, "V:B:v:b:o:h", long_options, &option_index)) != -1){
         switch (opt){
             case 'v': case 'V':
                 if (optarg != NULL){
