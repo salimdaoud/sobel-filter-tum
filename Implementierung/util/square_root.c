@@ -30,3 +30,14 @@ uint8_t squareroot_lookup (int value) {
     }
     return 0;
 }
+
+// Babylonian method
+uint8_t squareroot_simple (int value) {
+    int x = value;
+    int y = 1;
+    while(x > y) {
+        x = (x + y) / 2;
+        y = value / x;
+    }
+    return x;
+}
