@@ -58,7 +58,7 @@ void sobel_kernel_unroll_V2( const uint8_t* img, size_t width, size_t height,
                          float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*) tmp;
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image);
 
     uint8_t* image_row_prev = grayscale_image - width;
     uint8_t* image_row_now = grayscale_image;
@@ -110,7 +110,7 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
                 float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*)tmp;
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image);
 
     size_t row_offset = 0;
 
@@ -334,7 +334,7 @@ void sobel_squareroot_lookup_V1( const uint8_t* img, size_t width, size_t height
     uint8_t* grayscale_image = (uint8_t*) tmp;
 
     // Grayscale conversion
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image);
     size_t arr_ct = 0;
 
     // Sobel edge detection
@@ -404,7 +404,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
     uint8_t* grayscale_image = (uint8_t*) tmp;
 
     // Grayscale conversion
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image);
 
     size_t image_size = width * height;
 
