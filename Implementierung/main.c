@@ -17,7 +17,7 @@
 int main(int argc, char* argv[]) {
 
     struct ParsedArgs args;
-    size_t repetitions = 1; //args.repetitions TODO: fix arg parser
+    //size_t repetitions = 1; //args.repetitions TODO: fix arg parser
 
     // Parse arguments
     if (arg_parser(argc, argv, &args) == -1) {
@@ -49,45 +49,93 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    for (size_t i = 0; i < args.repetitions; i++) {
-        switch (args.version_flag) {
-            case 1:
-                printf("Squareroot lookup Sobel implementation used.\n");
-                sobel_squareroot_lookup(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                        b_value_weighted, tmp, result, args.benchmark_flag);
+   
+    switch (args.version_flag) {
+        case 1:
+            printf("Squareroot lookup Sobel implementation used.\n");
+            if (args.benchmark_flag){
+                start_time_measurement();
+            }
+            for (size_t i = 0; i < args.repetitions; i++) {
+                sobel_squareroot_lookup_V1(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                        b_value_weighted, tmp, result);
+            }
+            if (args.benchmark_flag){
+                end_time_measurement("Sobel Squareroot Lookup");
+            }
+            break;
+        case 2:
+            printf("Kernel unroll Sobel implementation used.\n");
+            if (args.benchmark_flag){
+                start_time_measurement();
+            }
+            for (size_t i = 0; i < args.repetitions; i++) {
+                sobel_kernel_unroll_V2(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                    b_value_weighted, tmp, result);
+            }
+            if (args.benchmark_flag){
+                end_time_measurement("Sobel Kernel Unroll");
+            }
+            break;
+        case 3:
+            if (width >= 4) {
+                printf("SIMD Sobel implementation used.\n");
+                if (args.benchmark_flag){
+                    start_time_measurement();
+                }
+                for (size_t i = 0; i < args.repetitions; i++) {
+                    sobel_SIMD_V3(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                b_value_weighted, tmp, result);
+                }
+                if (args.benchmark_flag){
+                    end_time_measurement("Sobel SIMD implementation");
+                }
+            } else {
+                printf("Image pixel width is too small. Using SIMD does not make sense.\n"
+                        "Standard Sobel implementation used.\n");
+                if (args.benchmark_flag){
+                    start_time_measurement();
+                }
+                for (size_t i = 0; i < args.repetitions; i++) {
+                    sobel_naive_V0(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                b_value_weighted, tmp, result);
+                }
+                if (args.benchmark_flag){
+                    end_time_measurement("Naive Sobel Implementation");
+                }
                 break;
-            case 2:
-                printf("Kernel unroll Sobel implementation used.\n");
-                sobel_kernel_unroll(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                    b_value_weighted, tmp, result, args.benchmark_flag);
-                break;
-            case 3:
-                if (width >= 4) {
-                    printf("SIMD Sobel implementation used.\n");
-                    sobel_SIMD(rgbData, width, height, r_value_weighted, g_value_weighted,
-                               b_value_weighted, tmp, result, args.benchmark_flag);
-                } else {
-                    printf("Image pixel width is too small. Using SIMD does not make sense.\n"
-                           "Standard Sobel implementation used.\n");
-                    sobel_naive(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                b_value_weighted, tmp, result, args.benchmark_flag);
-                    break;
                 }
 
-                break;
-            case 4:
-                printf("Separated Convolution Sobel implementation used.\n");
-                sobel_separated_convolution(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                            b_value_weighted, tmp, result, args.benchmark_flag);
-                break;
-            default:
-                printf("Standard Sobel implementation used.\n");
-                sobel_naive(rgbData, width, height, r_value_weighted, g_value_weighted,
-                            b_value_weighted, tmp, result, args.benchmark_flag);
-                break;
+            break;
+        case 4:
+            printf("Separated Convolution Sobel implementation used.\n");
+            if (args.benchmark_flag){
+                start_time_measurement();
+            }
+            for (size_t i = 0; i < args.repetitions; i++) {
+                sobel_separated_convolution_V4(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                            b_value_weighted, tmp, result);
+            }
+            if (args.benchmark_flag){
+                end_time_measurement("Sobel Separated Convolution");
+            }
+            break;
+        default:
+            printf("Standard Sobel implementation used.\n");
+            if (args.benchmark_flag){
+                start_time_measurement();
+            }
+            for (size_t i = 0; i < args.repetitions; i++) {
+                sobel_naive_V0(rgbData, width, height, r_value_weighted, g_value_weighted,
+                            b_value_weighted, tmp, result);
+            }
+            if (args.benchmark_flag){
+                end_time_measurement("Naive Sobel Implementation");
+            }
+            break;
         }
 
-    }
+    
 
     // Write result to PGM
     if (args.output_file != NULL){
@@ -118,11 +166,11 @@ int main(int argc, char* argv[]) {
         test_img_to_grayscale_SIMD();
         test_img_to_grayscale();
         test_img_to_grayscale_bitshift();
-        test_sobel_naive();
-        test_sobel_kernel_unroll();
-        test_sobel_SIMD();
-        test_sobel_squareroot_lookup();
-        test_sobel_separated_convolution();
+        test_sobel_naive_V0();
+        test_sobel_kernel_unroll_V2();
+        test_sobel_SIMD_V3();
+        test_sobel_squareroot_lookup_V1();
+        test_sobel_separated_convolution_V4();
         test_parse_ppm_header_correct_header();
         test_parse_ppm_header_incorrect_header();
         test_read_ppm_correct_file();

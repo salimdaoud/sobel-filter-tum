@@ -1,13 +1,13 @@
 #include "sobel.h"
 
 // Sobel operator implementation
-void sobel_naive( const uint8_t* img, size_t width, size_t height,
-            float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag ) {
+void sobel_naive_V0( const uint8_t* img, size_t width, size_t height,
+            float a, float b, float c, void* tmp, uint8_t* result) {
 
     // Temporary buffer for grayscale image
     uint8_t* grayscale_image = (uint8_t*)tmp;
 
-    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image, benchmark_flag);
+    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image);
 
     // Sobel edge detection
     int kern_vertical[3][3] = {
@@ -20,10 +20,6 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
             { 0,  0,  0},
             {-1, -2, -1}
     };
-
-    if(benchmark_flag) {
-        start_time_measurement();
-    }
 
     for (size_t gray_y = 0; gray_y < height; gray_y++) {
         for (size_t gray_x = 0; gray_x < width; gray_x++) {
@@ -56,24 +52,17 @@ void sobel_naive( const uint8_t* img, size_t width, size_t height,
         }
     }
 
-    if(benchmark_flag) {
-        end_time_measurement("Naive Sobel Implementation");
-    }
 }
 
-void sobel_kernel_unroll( const uint8_t* img, size_t width, size_t height,
-                         float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag ) {
+void sobel_kernel_unroll_V2( const uint8_t* img, size_t width, size_t height,
+                         float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*) tmp;
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
 
     uint8_t* image_row_prev = grayscale_image - width;
     uint8_t* image_row_now = grayscale_image;
     uint8_t* image_row_next = grayscale_image + width;
-
-    if(benchmark_flag) {
-        start_time_measurement();
-    }
 
     size_t row_indices[height];
 
@@ -115,17 +104,13 @@ void sobel_kernel_unroll( const uint8_t* img, size_t width, size_t height,
         image_row_now += width;
         image_row_next += width;
     }
-
-    if(benchmark_flag) {
-        end_time_measurement("Sobel Kernel Unroll");
-    }
 }
 
-void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
-                float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag) {
+void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
+                float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*)tmp;
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
 
     size_t row_offset = 0;
 
@@ -137,10 +122,6 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
     __m128i zero_mask_last_int = _mm_set_epi32(0x00000000,0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
     __m128i zero_mask_last_two_int = _mm_set_epi32(0x00000000,0x00000000, 0xFFFFFFFF, 0xFFFFFFFF);
     __m128i zero_mask_last_three_int = _mm_set_epi32(0x00000000,0x00000000, 0x00000000, 0xFFFFFFFF);
-
-    if (benchmark_flag) {
-        start_time_measurement();
-    }
 
     for (size_t gray_y = 0; gray_y < (height - 1); gray_y++) {
         row_offset = gray_y * width;
@@ -344,20 +325,16 @@ void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
             _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
         }
     }
-
-    if(benchmark_flag) {
-        end_time_measurement("Sobel SIMD implementation");
-    }
 }
 
-void sobel_squareroot_lookup( const uint8_t* img, size_t width, size_t height,
-                             float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag ) {
+void sobel_squareroot_lookup_V1( const uint8_t* img, size_t width, size_t height,
+                             float a, float b, float c, void* tmp, uint8_t* result) {
 
     // Temporary buffer for grayscale image
     uint8_t* grayscale_image = (uint8_t*) tmp;
 
     // Grayscale conversion
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
     size_t arr_ct = 0;
 
     // Sobel edge detection
@@ -372,10 +349,6 @@ void sobel_squareroot_lookup( const uint8_t* img, size_t width, size_t height,
             {0,  0,  0},
             {-1, -2, -1}
     };
-
-    if(benchmark_flag) {
-        start_time_measurement();
-    }
 
     size_t row_indices[height];
 
@@ -422,20 +395,16 @@ void sobel_squareroot_lookup( const uint8_t* img, size_t width, size_t height,
             result[arr_ct++] = magnitude;
         }
     }
-
-    if(benchmark_flag) {
-        end_time_measurement("Sobel Squareroot Lookup");
-    }
 }
 
-void sobel_separated_convolution( const uint8_t* img, size_t width, size_t height,
-                                 float a, float b, float c, void* tmp, uint8_t* result, bool benchmark_flag ) {
+void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t height,
+                                 float a, float b, float c, void* tmp, uint8_t* result) {
 
     // Temporary buffer for grayscale image
     uint8_t* grayscale_image = (uint8_t*) tmp;
 
     // Grayscale conversion
-    img_to_grayscale(img, width, height, a, b, c, grayscale_image, benchmark_flag);
+    img_to_grayscale(img, width, height, a, b, c, grayscale_image);
 
     size_t image_size = width * height;
 
@@ -451,10 +420,6 @@ void sobel_separated_convolution( const uint8_t* img, size_t width, size_t heigh
     size_t current_pixel = 0;
     int sum = 0;
     int sum2 = 0;
-
-    if(benchmark_flag) {
-        start_time_measurement();
-    }
 
     for (size_t i = 0; i < height; i++) {
         row_indices[i] = i * width;
@@ -541,11 +506,6 @@ void sobel_separated_convolution( const uint8_t* img, size_t width, size_t heigh
         } else {
             *result++ = 255;
         }
-    }
-
-
-    if(benchmark_flag) {
-        end_time_measurement("Sobel Separated Convolution");
     }
 
     result = result_start;

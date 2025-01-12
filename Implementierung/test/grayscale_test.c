@@ -9,7 +9,7 @@ void test_img_to_grayscale_naive(void) {
 
     uint8_t actual[10] = {0};
 
-    img_to_grayscale_naive(img, 10, 1, 0.299f, 0.587f, 0.114f, actual, 0);
+    img_to_grayscale_naive(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
     /*for (size_t i = 0; i < 10; i++{
         printf("%d\n", actual[i]);
     }*/
@@ -26,7 +26,7 @@ void test_img_to_grayscale_naive_little_weights(void) {
 
     uint8_t actual[10] = {0};
 
-    img_to_grayscale_naive(img, 10, 1, 1.0E-3, 1.0E-5, 1.0E-7, actual, 0);
+    img_to_grayscale_naive(img, 10, 1, 1.0E-3, 1.0E-5, 1.0E-7, actual);
     /*for (size_t i = 0; i < 10; i++){
         printf("%d\n", actual[i]);
     }*/
@@ -43,7 +43,7 @@ void test_img_to_grayscale_SIMD(void) {
 
     uint8_t actual[10] = {0};
 
-    img_to_grayscale_SIMD(img, 10, 1, 0.299f, 0.587f, 0.114f, actual, 0);
+    img_to_grayscale_SIMD(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
     /*for (size_t i = 0; i < 10; i++){
     printf("%d\n", actual[i]);
     }*/
@@ -61,7 +61,7 @@ void test_img_to_grayscale(void) {
 
     uint8_t actual[10] = {0};
 
-    img_to_grayscale(img, 10, 1, 0.299f, 0.587f, 0.114f, actual, 0);
+    img_to_grayscale(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
     /*for (size_t i = 0; i < 10; i++){
     printf("%d\n", actual[i]);
     }*/
@@ -79,7 +79,7 @@ void test_img_to_grayscale_bitshift(void) {
 
     uint8_t actual[10] = {0};
 
-    img_to_grayscale_bitshift(img, 10, 1, 0.299f, 0.587f, 0.114f, actual, 0);
+    img_to_grayscale_bitshift(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
     /*for (size_t i = 0; i < 10; i++){
     printf("%d\n", actual[i]);
     }*/

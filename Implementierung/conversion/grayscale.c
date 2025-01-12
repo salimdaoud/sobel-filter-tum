@@ -1,34 +1,24 @@
 #include "grayscale.h"
 
 void img_to_grayscale_naive(const uint8_t* img, size_t width, size_t height,
-               float a, float b, float c, uint8_t* gray, bool benchmark_flag){
+               float a, float b, float c, uint8_t* gray){
 
-    if(benchmark_flag) {
-        start_time_measurement();
-    }
 
     for (size_t i = 0; i < width * height; i++) {
         size_t idx = i * 3; // Each pixel has 3 components (R, G, B)
         gray[i] = (uint8_t)((a * img[idx] + b * img[idx + 1] + c * img[idx + 2]) / (a + b + c));
     }
 
-    if(benchmark_flag) {
-        end_time_measurement("Naive Grayscaling");
-    }
 }
 
 void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
-                           float a, float b, float c, uint8_t* gray, bool benchmark_flag){
+                           float a, float b, float c, uint8_t* gray){
     size_t total_pixels = width * height;
     __m128 weight_r = _mm_set1_ps(a);        // [a, a, a, a]
     __m128 weight_g = _mm_set1_ps(b);        // [b, b, b, b]
     __m128 weight_b = _mm_set1_ps(c);        // [c, c, c, c]
     size_t i = 0;
     size_t simd_pixels = total_pixels - (total_pixels % 4); // Process in chunks of 4 pixels
-
-    if(benchmark_flag) {
-        start_time_measurement();
-    }
 
     for (; i < simd_pixels; i+=4){
         __m128 red = _mm_set_ps(
@@ -60,45 +50,24 @@ void img_to_grayscale_SIMD(const uint8_t* img, size_t width, size_t height,
         size_t idx = i * 3; // Each pixel has 3 components (R, G, B)
         gray[i] = (uint8_t)((a * img[idx] + b * img[idx + 1] + c * img[idx + 2]) / (a + b + c));
     }
-
-    if(benchmark_flag) {
-        end_time_measurement("SIMD Grayscaling");
-    }
 }
 
-void img_to_grayscale(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* gray,
-                      bool benchmark_flag){
+void img_to_grayscale(const uint8_t* img, size_t width, size_t height, float a, float b, float c, uint8_t* gray){
 
     size_t rgb_values_count = width * height * 3;
-
-    if(benchmark_flag) {
-        start_time_measurement();
-    }
 
     for (size_t i = 0, j = 0; i < rgb_values_count; i += 3, j++) {
         gray[j] = (uint8_t)(a * img[i] + b * img[i + 1] + c * img[i + 2]);
     }
-
-    if(benchmark_flag) {
-        end_time_measurement("Grayscaling");
-    }
 }
 
 void img_to_grayscale_bitshift(const uint8_t* img, size_t width, size_t height,
-                               float a, float b, float c, uint8_t* gray, bool benchmark_flag){
+                               float a, float b, float c, uint8_t* gray){
 
     size_t rgb_values_count = width * height * 3;
 
-    if(benchmark_flag) {
-        start_time_measurement();
-    }
-
     for (size_t i = 0, j = 0; i < rgb_values_count; i += 3, j++) {
         gray[j] = (uint8_t)((img[i] >> 2) + (img[i + 1] >> 1) + (img[i + 2] >> 2));
-    }
-
-    if(benchmark_flag) {
-        end_time_measurement("Grayscaling with Bitshifts");
     }
 }
 

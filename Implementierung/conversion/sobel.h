@@ -26,33 +26,30 @@ typedef struct {
     size_t end_row;
 } SobelArgs;
 
-void sobel_naive( const uint8_t* img, size_t width, size_t height,
+void sobel_naive_V0( const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
-            uint8_t* result,
-            bool benchmark_flag);
+            uint8_t* result);
         
-void sobel_kernel_unroll(const uint8_t* img, size_t width, size_t height,
+void sobel_kernel_unroll_V2(const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
-            uint8_t* result,
-            bool benchmark_flag);
+            uint8_t* result);
 
-void sobel_SIMD(const uint8_t* img, size_t width, size_t height,
+void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
             float a, float b, float c,
             void* tmp,
-            uint8_t* result,
-            bool benchmark_flag);
+            uint8_t* result);
 
-void sobel_squareroot_lookup(const uint8_t* img, size_t width, size_t height,
+void sobel_squareroot_lookup_V1(const uint8_t* img, size_t width, size_t height,
                              float a, float b, float c,
                              void* tmp,
-                             uint8_t* result, bool benchmark_flag);
+                             uint8_t* result);
 
-void sobel_separated_convolution(const uint8_t* img, size_t width, size_t height,
+void sobel_separated_convolution_V4(const uint8_t* img, size_t width, size_t height,
                                  float a, float b, float c,
                                  void* tmp,
-                                 uint8_t* result, bool benchmark_flag);
+                                 uint8_t* result);
 
 void* sobel_worker(void* args);
 

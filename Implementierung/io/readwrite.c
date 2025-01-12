@@ -12,7 +12,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     }
 
     // Memory-map the file. Not necessary for sequential implementation, but we wanted to make it uniform.
-    char* mapped_file;
+    char* mapped_file = NULL;
     if ((mapped_file = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0))
         == MAP_FAILED) {
         perror("Error mapping file.");

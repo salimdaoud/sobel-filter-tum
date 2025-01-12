@@ -12,7 +12,7 @@ IMPLEMENTIERUNG :=	$(wildcard conversion/*.c) \
 					$(wildcard test/*.c)
 
 # Additional flags for the compiler
-CFLAGS := -Wall -Wextra -std=c17 
+CFLAGS := -Wall -Wextra -std=c17 -msse4.1
 
 # ---------------------------------------
 # CONFIGURATION END
@@ -39,14 +39,19 @@ debug: $(TARGET)
 release: CFLAGS += -O2 
 release: $(TARGET)
 
+# Performance Benchmarking
+perf: CFLAGS += -O3
+perf: $(TARGET)
+	  @echo "Running performance benchmarks..."
+
 # recipe for building the program
 $(TARGET): $(SOURCES)
-	$(CC)  -msse4.1 $(CFLAGS) -o $@ $(SOURCES)  -lm
+	$(CC)  $(CFLAGS) -o $@ $(SOURCES)  -lm
 
 # clean up
 clean:
 	rm -f $(TARGET)
 
-.PHONY: all debug release clean
+.PHONY: all debug release perf clean
 
 # TODO: automate performance tests

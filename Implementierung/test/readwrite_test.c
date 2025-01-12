@@ -98,7 +98,9 @@ void test_write_pgm_file(void) {
 
     // Read the file contents into a buffer
     uint8_t file_data[128];
-    fread(file_data, sizeof(uint8_t), sizeof(file_data), file);
+    if (fread(file_data, sizeof(uint8_t), sizeof(file_data), file) == 0){
+        fprintf(stderr, "could not read from file");
+    }
     fclose(file);
 
     // Construct the expected file data

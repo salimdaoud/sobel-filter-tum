@@ -4,15 +4,15 @@
 #include "test.h"
 #include "../conversion/sobel.h"
 
-void test_sobel_naive (void);
+void test_sobel_naive_V0 (void);
 
-void test_sobel_kernel_unroll(void);
+void test_sobel_kernel_unroll_V2(void);
 
-void test_sobel_SIMD(void);
+void test_sobel_SIMD_V3(void);
 
-void test_sobel_squareroot_lookup (void);
+void test_sobel_squareroot_lookup_V1 (void);
 
-void test_sobel_separated_convolution (void);
+void test_sobel_separated_convolution_V4 (void);
 
 
 #endif
