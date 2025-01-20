@@ -43,21 +43,22 @@ void test_sobel_kernel_unroll_V2(void){
 }
 
 void test_sobel_SIMD_V3(void) {
-    uint8_t img [27] = {0, 8, 17, 19, 23, 26, 32, 33, 41,
-                        50, 60, 72, 84, 91, 10, 20, 35, 37,
-                        45, 40, 53, 72, 99, 20, 21, 23, 44};
+    uint8_t img [36] = {0, 8, 17, 19, 23, 26, 32, 33, 41,50, 60, 72,
+                        84, 91, 10, 20, 35, 37,45, 40, 53,72, 99, 20,
+                        21, 23, 44,158, 56, 218, 158,56,218, 158,56,218};
 
-    uint8_t expected [9] = {230, 247, 185,
-                            255, 152, 255,
-                            255, 254, 255};
+    uint8_t expected [12] = {202, 181, 230,230,
+                             220, 255,255, 255,
+                             255, 218,201,255};
 
-    uint8_t gray[9] = {0};
-    uint8_t actual[9] = {0};
+    uint8_t gray[12] = {0};
 
-    sobel_SIMD_V3(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
+    uint8_t* actual = malloc(12);
 
-    for (size_t i = 0; i < 9; i++){
-        printf("%d\n", actual[i]);
+    sobel_SIMD_V3(img, 4, 3, 0.299f, 0.587f, 0.114f, gray, actual);
+
+    for (size_t i = 0; i < 12; i++){
+        printf("expected:%d, got: %d\n",expected[i], actual[i]);
     }
 
     assert_uint8_array_equal(expected, actual, 9);
