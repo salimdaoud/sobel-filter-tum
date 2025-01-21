@@ -143,18 +143,58 @@ void img_to_grayscale_bitshift(const uint8_t* img, size_t width, size_t height,
 
 // Source: https://stackoverflow.com/questions/57832444/efficient-c-code-no-libs-for-image-transformation-into-custom-rgb-pixel-grey/57844027#57844027
 
-//Convert from RGBRGBRGB... to RRR..., GGG..., BBB...
-//Input: Two XMM registers (16 + 8 = 24 uint8 elements) ordered RGBRGB...
-//Output: Three XMM registers ordered RRR..., GGG... and BBB...
-//        Unpack the result from uint8 elements to uint16 elements.
-static __inline void GatherRGBx8(const __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0,
-                                 const __m128i bgr_7_bgr_6_bg_5,
-                                    __m128i r_76543210,
-                                    __m128i g_76543210,
-                                    __m128i b_76543210)
-{
+void img_to_grayscale_simd_8_pixels(const uint8_t* img, size_t width, size_t height,
+                                    float a, float b, float c, uint8_t* gray){
+    size_t rgb_size = height * width * 3;
+    size_t simd_size = rgb_size - (rgb_size % 24);
+    size_t index_rgb = 0;
+    size_t index_gray = 0;
+
+    //Process one row per iteration.
+    for (; index_rgb < simd_size; index_rgb += 24, index_gray += 8) {
+
+        __m128i r_76543210;
+        __m128i g_76543210;
+        __m128i b_76543210;
+        // Load 8 elements of each color channel R,G,B from first row. Load 24 (8 * 3 values) unaligned, 16 + 8 char
+        __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0 = _mm_loadu_si128((__m128i*)(img + index_rgb));
+        __m128i bgr_7_bgr_6_bg_5                  = _mm_loadu_si128((__m128i*)(img + index_rgb + 16));
+
+        // Separate RGB, and put together R elements, G elements and B elements (together in same XMM register).
+        // Result is also unpacked from uint8 to uint16 elements.
+        extract_r_g_b_sorted(r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0, bgr_7_bgr_6_bg_5,
+                             &r_76543210, &g_76543210, &b_76543210);
+
+        // Calculate 8 Y elements.
+        __m128i gray_16_76543210 = convert_rgb_to_gray_8_pixels(r_76543210, g_76543210, b_76543210,
+                                                                a, b, c);
+
+        // Pack uint16 elements to 16 uint8 elements (put result in single XMM register). Only lower 8 uint8 elements are relevant.
+        __m128i gray_8_76543210 = _mm_packus_epi16(gray_16_76543210, gray_16_76543210);
+
+        // Store 8 elements of Y in row Y0, and 8 elements of Y in row Y1.
+        _mm_storel_epi64((__m128i*)(gray + index_gray), gray_8_76543210);
+    }
+
+    size_t pixels_left = rgb_size % 24;
+
+    for (size_t i = 0;  i < pixels_left; index_gray++, i += 3) {
+        size_t idx = index_rgb + i; // Each pixel has 3 components (R, G, B)
+        gray[index_gray] = (uint8_t)(a * img[idx] + b * img[idx + 1] + c * img[idx + 2]);
+    }
+}
+
+static __inline void extract_r_g_b_sorted(const __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0,
+                                          const __m128i bgr_7_bgr_6_bg_5,
+                                          __m128i* r_76543210,
+                                          __m128i* g_76543210,
+                                          __m128i* b_76543210){
+
 //Shuffle mask for gathering 4 R elements, 4 G elements and 4 B elements (also set last 4 elements to duplication of first 4 elements).
-const __m128i shuffle_mask = _mm_set_epi8(9,6,3,0, 11,8,5,2, 10,7,4,1, 9,6,3,0);
+const __m128i shuffle_mask = _mm_set_epi8(9,6,3,0,      // red
+                                          11,8,5,2,     // green
+                                          10,7,4,1,     // blue
+                                          9,6,3,0);     // red
 
 // move missing rgb values from 16 element register to former 8 element register.
 __m128i bgr7_bgr6_bgr5_bgr_4 = _mm_alignr_epi8(bgr_7_bgr_6_bg_5, r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0, 12);
@@ -177,157 +217,34 @@ __m128i r_7654_b7654_g_7654_r_7654 = _mm_shuffle_epi8(bgr7_bgr6_bgr5_bgr_4, shuf
     __m128i z_0000_r_7654_b_7654_b_3210 = _mm_alignr_epi8(z_0000_z_0000_r_7654_b_7654, b_3210_g_3210_r_3210_z_0000, 12);
 
 // Unpack uint8 elements to uint16 elements.
-r_76543210 = _mm_cvtepu8_epi16(b_7654_g_7654_r_7654_r_3210);
-g_76543210 = _mm_cvtepu8_epi16(r_7654_b_7654_g_7654_g_3210);
-b_76543210 = _mm_cvtepu8_epi16(z_0000_r_7654_b_7654_b_3210);
+*r_76543210 = _mm_cvtepu8_epi16(b_7654_g_7654_r_7654_r_3210);
+*g_76543210 = _mm_cvtepu8_epi16(r_7654_b_7654_g_7654_g_3210);
+*b_76543210 = _mm_cvtepu8_epi16(z_0000_r_7654_b_7654_b_3210);
 }
-
-
 
 // Calculate 8 Grayscale elements from 8 RGB elements.
-// Y = 0.2989*R + 0.5870*G + 0.1140*B
-// Conversion model used by MATLAB https://www.mathworks.com/help/matlab/ref/rgb2gray.html
-static __inline __m128i Rgb2Yx8(__m128i r7_r6_r5_r4_r3_r2_r1_r0,
-                                __m128i g7_g6_g5_g4_g3_g2_g1_g0,
-                                __m128i b7_b6_b5_b4_b3_b2_b1_b0)
-{
-    // Each coefficient is expanded by 2^15, and rounded to int16 (add 0.5 for rounding).
-    const __m128i r_coef = _mm_set1_epi16((short)(0.2989*32768.0 + 0.5));  //8 coefficients - R scale factor.
-    const __m128i g_coef = _mm_set1_epi16((short)(0.5870*32768.0 + 0.5));  //8 coefficients - G scale factor.
-    const __m128i b_coef = _mm_set1_epi16((short)(0.1140*32768.0 + 0.5));  //8 coefficients - B scale factor.
+static __inline __m128i convert_rgb_to_gray_8_pixels(__m128i r_76543210, __m128i g_76543210, __m128i b_76543210,
+                                                     float r_value_weighted, float g_value_weighted, float b_value_weighted) {
+
+    // Each coefficient is expanded by 2^15 (not 2^16 as we use signed integers to be able to use _mm_mulhrs_epi16),
+    // and rounded to int16 (add 0.5 for rounding). Cannot use shift because of float.
+    const __m128i r_coef_extended = _mm_set1_epi16((int16_t)(r_value_weighted * 32768.0 + 0.5));
+    const __m128i g_coef_extended = _mm_set1_epi16((int16_t)(g_value_weighted * 32768.0 + 0.5));
+    const __m128i b_coef_extended = _mm_set1_epi16((int16_t)(b_value_weighted * 32768.0 + 0.5));
 
     // Multiply input elements by 64 for improved accuracy.
-    r7_r6_r5_r4_r3_r2_r1_r0 = _mm_slli_epi16(r7_r6_r5_r4_r3_r2_r1_r0, 6);
-    g7_g6_g5_g4_g3_g2_g1_g0 = _mm_slli_epi16(g7_g6_g5_g4_g3_g2_g1_g0, 6);
-    b7_b6_b5_b4_b3_b2_b1_b0 = _mm_slli_epi16(b7_b6_b5_b4_b3_b2_b1_b0, 6);
+    r_76543210 = _mm_slli_epi16(r_76543210, 6);
+    g_76543210 = _mm_slli_epi16(g_76543210, 6);
+    b_76543210 = _mm_slli_epi16(b_76543210, 6);
 
     // Use the special intrinsic _mm_mulhrs_epi16 that calculates round(r*r_coef/2^15).
-    // Calculate Y = 0.2989*R + 0.5870*G + 0.1140*B (use fixed point computations)
-    __m128i y7_y6_y5_y4_y3_y2_y1_y0 = _mm_add_epi16(_mm_add_epi16(
-                                                            _mm_mulhrs_epi16(r7_r6_r5_r4_r3_r2_r1_r0, r_coef),
-                                                            _mm_mulhrs_epi16(g7_g6_g5_g4_g3_g2_g1_g0, g_coef)),
-                                                    _mm_mulhrs_epi16(b7_b6_b5_b4_b3_b2_b1_b0, b_coef));
+    // Calculate gray_value = 0.2989*R + 0.5870*G + 0.1140*B (use fixed point computations)
+    __m128i gray_76543210 = _mm_add_epi16(_mm_add_epi16( _mm_mulhrs_epi16(r_76543210, r_coef_extended),
+                                                            _mm_mulhrs_epi16(g_76543210, g_coef_extended)),
+                                                            _mm_mulhrs_epi16(b_76543210, b_coef_extended));
 
-    // Divide result by 64.
-    y7_y6_y5_y4_y3_y2_y1_y0 = _mm_srli_epi16(y7_y6_y5_y4_y3_y2_y1_y0, 6);
+    // Divide result by 64 to redo the multiplication above.
+    gray_76543210 = _mm_srli_epi16(gray_76543210, 6);
 
-    return y7_y6_y5_y4_y3_y2_y1_y0;
-}
-
-
-
-
-// Convert single row from RGB to Grayscale (use SSE intrinsics).
-// I0 points source row, and J0 points destination row.
-// I0 -> rgbrgbrgbrgbrgbrgb...
-// J0 -> yyyyyy
-static void Rgb2GraySingleRow_useSSE(const unsigned char I0[],
-                                     const int image_width,
-                                     unsigned char J0[])
-{
-    int x;      // Index in J0.
-    int srcx;   // Index in I0.
-    __m128i r7_r6_r5_r4_r3_r2_r1_r0;
-    __m128i g7_g6_g5_g4_g3_g2_g1_g0;
-    __m128i b7_b6_b5_b4_b3_b2_b1_b0;
-
-    srcx = 0;
-
-    // Process 8 pixels per iteration.
-    for (x = 0; x < image_width; x += 8)
-    {
-        // Load 8 elements of each color channel R,G,B from first row.
-        __m128i r5_b4_g4_r4_b3_g3_r3_b2_g2_r2_b1_g1_r1_b0_g0_r0 = _mm_loadu_si128((__m128i*)&I0[srcx]);     //Unaligned load of 16 uint8 elements
-        __m128i b7_g7_r7_b6_g6_r6_b5_g5                         = _mm_loadu_si128((__m128i*)&I0[srcx+16]);  //Unaligned load of (only) 8 uint8 elements (lower half of XMM register).
-
-        // Separate RGB, and put together R elements, G elements and B elements (together in same XMM register).
-        // Result is also unpacked from uint8 to uint16 elements.
-        GatherRGBx8(r5_b4_g4_r4_b3_g3_r3_b2_g2_r2_b1_g1_r1_b0_g0_r0,
-                    b7_g7_r7_b6_g6_r6_b5_g5,
-                    r7_r6_r5_r4_r3_r2_r1_r0,
-                    g7_g6_g5_g4_g3_g2_g1_g0,
-                    b7_b6_b5_b4_b3_b2_b1_b0);
-
-
-        // Calculate 8 Y elements.
-        __m128i y7_y6_y5_y4_y3_y2_y1_y0 = Rgb2Yx8(r7_r6_r5_r4_r3_r2_r1_r0,
-                                                  g7_g6_g5_g4_g3_g2_g1_g0,
-                                                  b7_b6_b5_b4_b3_b2_b1_b0);
-
-        // Pack uint16 elements to 16 uint8 elements (put result in single XMM register). Only lower 8 uint8 elements are relevant.
-        __m128i j7_j6_j5_j4_j3_j2_j1_j0 = _mm_packus_epi16(y7_y6_y5_y4_y3_y2_y1_y0, y7_y6_y5_y4_y3_y2_y1_y0);
-
-        // Store 8 elements of Y in row Y0, and 8 elements of Y in row Y1.
-        _mm_storel_epi64((__m128i*)&J0[x], j7_j6_j5_j4_j3_j2_j1_j0);
-
-        srcx += 24; //Advance 24 source bytes per iteration.
-    }
-}
-
-
-
-
-
-//Convert image I from pixel ordered RGB to Grayscale format.
-//Conversion formula: Y = 0.2989*R + 0.5870*G + 0.1140*B (Rec.ITU-R BT.601)
-//Formula is based on MATLAB rgb2gray function: https://www.mathworks.com/help/matlab/ref/rgb2gray.html
-//Implementation uses SSE intrinsics for performance optimization.
-//Use fixed point computations for better performance.
-//I - Input image in pixel ordered RGB format.
-//image_width - Number of columns of I.
-//image_height - Number of rows of I.
-//J - Destination "image" in Grayscale format.
-
-//I is pixel ordered RGB color format (size in bytes is image_width*image_height*3):
-//RGBRGBRGBRGBRGBRGB
-//RGBRGBRGBRGBRGBRGB
-//RGBRGBRGBRGBRGBRGB
-//RGBRGBRGBRGBRGBRGB
-//
-//J is in Grayscale format (size in bytes is image_width*image_height):
-//YYYYYY
-//YYYYYY
-//YYYYYY
-//YYYYYY
-//
-//Limitations:
-//1. image_width must be a multiple of 8.
-//2. I and J must be two separate arrays (in place computation is not supported).
-//3. Rows of I and J are continues in memory (bytes stride is not supported, [but simple to add]).
-//
-//Comments:
-//1. The conversion formula is incorrect, but it's a commonly used approximation.
-//2. Code uses SSE 4.1 instruction set.
-//   Better performance can be archived using AVX2 implementation.
-//   (AVX2 is supported by Intel Core 4'th generation and above, and new AMD processors).
-//3. The code is not the best SSE optimization:
-//   Uses unaligned load and store operations.
-//   Utilize only half XMM register in few cases.
-//   Instruction selection is probably sub-optimal.
-void Rgb2Gray_useSSE(const unsigned char I[],
-                     const int image_width,
-                     const int image_height,
-                     unsigned char J[])
-{
-    //I0 points source image row.
-    const unsigned char *I0;  //I0 -> rgbrgbrgbrgbrgbrgb...
-
-    //J0 points destination image row.
-    unsigned char *J0;  //J0 -> YYYYYY
-
-    int y;  //Row index
-
-    //Process one row per iteration.
-    for (y = 0; y < image_height; y ++)
-    {
-        I0 = &I[y*image_width*3];       //Input row width is image_width*3 bytes (each pixel is R,G,B).
-
-        J0 = &J[y*image_width];         //Output Y row width is image_width bytes (one Y element per pixel).
-
-        //Convert row I0 from RGB to Grayscale.
-        Rgb2GraySingleRow_useSSE(I0,
-                                 image_width,
-                                 J0);
-    }
-
+    return gray_76543210;
 }
