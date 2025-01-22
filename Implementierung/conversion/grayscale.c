@@ -142,6 +142,19 @@ void img_to_grayscale_bitshift(const uint8_t* img, size_t width, size_t height,
 }
 
 // Source: https://stackoverflow.com/questions/57832444/efficient-c-code-no-libs-for-image-transformation-into-custom-rgb-pixel-grey/57844027#57844027
+static __inline void extract_r_g_b_sorted(const __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0,
+                                          const __m128i bgr_7_bgr_6_bg_5,
+                                          __m128i* r_76543210,
+                                          __m128i* g_76543210,
+                                          __m128i* b_76543210);
+
+static __inline __m128i convert_rgb_to_gray_8_pixels(__m128i r_76543210,
+                                                     __m128i g_76543210,
+                                                     __m128i b_76543210,
+                                                     float r_value_weighted,
+                                                     float g_value_weighted,
+                                                     float b_value_weighted);
+
 
 void img_to_grayscale_simd_8_pixels(const uint8_t* img, size_t width, size_t height,
                                     float a, float b, float c, uint8_t* gray){

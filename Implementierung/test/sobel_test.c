@@ -36,7 +36,7 @@ void test_sobel_kernel_unroll_V2(void){
     sobel_kernel_unroll_V2(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
     for (size_t i = 0; i < 9; i++){
-        printf("%d\n", actual[i]);
+        printf("expected:%d, got: %d\n",expected[i], actual[i]);
     }
 
     assert_uint8_array_equal(expected, actual, 9);
