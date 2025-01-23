@@ -14,7 +14,7 @@ void test_img_to_grayscale_naive(void) {
         printf("%d\n", actual[i]);
     }*/
 
-    assert_uint8_array_equal(expected, actual, 10);
+    ASSERT_TRUE("Grayscale Naive Basic Test", uint8_array_equal(expected, actual, 10));
 }
 
 void test_img_to_grayscale_naive_little_weights(void) {
@@ -31,7 +31,7 @@ void test_img_to_grayscale_naive_little_weights(void) {
         printf("%d\n", actual[i]);
     }*/
 
-    assert_uint8_array_equal(expected, actual, 10);
+    ASSERT_TRUE("Grayscale Naive little weights Test", uint8_array_equal(expected, actual, 10));
 }
 
 void test_img_to_grayscale_SIMD(void) {
@@ -48,7 +48,7 @@ void test_img_to_grayscale_SIMD(void) {
     printf("%d\n", actual[i]);
     }*/
 
-    assert_uint8_array_equal(expected, actual, 10);
+    ASSERT_TRUE("Grayscale SIMD Basic Test", uint8_array_equal(expected, actual, 10));
 
 }
 
@@ -66,7 +66,7 @@ void test_img_to_grayscale(void) {
     printf("%d\n", actual[i]);
     }*/
 
-    assert_uint8_array_equal(expected, actual, 10);
+    ASSERT_TRUE("Grayscale Basic Test", uint8_array_equal(expected, actual, 10));
 
 }
 
@@ -84,6 +84,6 @@ void test_img_to_grayscale_bitshift(void) {
     printf("%d\n", actual[i]);
     }*/
 
-    assert_uint8_array_equal(expected, actual, 10);
+    ASSERT_TRUE("Grayscale Bitshift Basic Test", uint8_array_equal(expected, actual, 10));
 
 }

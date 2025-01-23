@@ -6,13 +6,6 @@
 #include "io/arg_parser.h"
 #include "util/time_measurement.h"
 #include "test/test.h"
-#include "test/grayscale_test.h"
-#include "test/sobel_test.h"
-#include "test/readwrite_test.h"
-
-
-
-
 
 int main(int argc, char* argv[]) {
 
@@ -22,6 +15,10 @@ int main(int argc, char* argv[]) {
     // Parse arguments
     if (arg_parser(argc, argv, &args) == -1) {
         return EXIT_FAILURE;
+    }
+
+    if (args.test_flag) {
+        goto test_only;
     }
 
     int width, height;
@@ -160,7 +157,15 @@ int main(int argc, char* argv[]) {
     free(tmp);
     free(result);
 
+
+    test_only:
     if (args.test_flag) {
+        #include "test/sobel_test.h"
+        #include "test/readwrite_test.h"
+        #include "test/grayscale_test.h"
+
+        putchar('\n');
+
         test_img_to_grayscale_naive();
         test_img_to_grayscale_naive_little_weights();
         test_img_to_grayscale_SIMD();
@@ -171,13 +176,20 @@ int main(int argc, char* argv[]) {
         test_sobel_SIMD_V3();
         test_sobel_squareroot_lookup_V1();
         test_sobel_separated_convolution_V4();
-        test_parse_ppm_header_correct_header();
-        test_parse_ppm_header_incorrect_header();
-        test_read_ppm_correct_file();
-        test_read_ppm_correct_file_parallel();
-        test_read_ppm_incorrcet_file();
-        test_write_pgm_file();
-        test_read_ppm_incorrcet_file_maxval();
+        //test_parse_ppm_header_correct_header();
+        //test_parse_ppm_header_incorrect_header();
+        //test_read_ppm_correct_file();
+        //test_read_ppm_correct_file_parallel();
+        //test_read_ppm_incorrcet_file();
+        //test_write_pgm_file();
+        //test_read_ppm_incorrcet_file_maxval();
+
+        int test_result = (global_failed_tests != 0);
+
+        printf("\nTest Run %s: %d of %d passed. %d failed.\n",
+               test_result ? "FAILED" : "SUCCESSFUL",
+               global_total_tests - global_failed_tests,
+               global_total_tests, global_failed_tests);
     }
     
     

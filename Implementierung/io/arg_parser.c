@@ -91,17 +91,21 @@ int arg_parser (int argc, char *argv[], struct ParsedArgs *args) {
         exit(1);
     }
     
+    if (!args->test_flag) {
+        // Display parsed values
+        printf("Implementation version: %ld\n", args->version_flag);
+        if (args->benchmark_flag) {
+            printf("Runtime measurement enabled with %ld repetitions\n", args->repetitions);
+        }
+        printf("Input file: %s\n", args->input_file);
+        if (args->output_file) {
+            printf("Output file: %s\n", args->output_file);
+        }
+        printf("Coefficients: a = %.3f, b = %.3f, c = %.3f\n", args->rgb_coeffs[0], args->rgb_coeffs[1], args->rgb_coeffs[2]);
 
-    // Display parsed values
-    printf("Implementation version: %ld\n", args->version_flag);
-    if (args->benchmark_flag) {
-        printf("Runtime measurement enabled with %ld repetitions\n", args->repetitions);
+        return 0;
+    } else {
+        printf("Test flag is set. Only tests are executed. See the results below:\n");
+        return 0;
     }
-    printf("Input file: %s\n", args->input_file);
-    if (args->output_file) {
-        printf("Output file: %s\n", args->output_file);
-    }
-    printf("Coefficients: a = %.3f, b = %.3f, c = %.3f\n", args->rgb_coeffs[0], args->rgb_coeffs[1], args->rgb_coeffs[2]);
-
-    return 0;
 }

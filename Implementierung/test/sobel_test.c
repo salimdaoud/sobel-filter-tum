@@ -14,11 +14,11 @@ void test_sobel_naive_V0(void) {
 
     sobel_naive_V0(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
-    /*for (size_t i = 0; i < 9; i++){
-        printf("%d\n", actual[i]);
-    }*/
-
-    assert_uint8_array_equal(expected, actual, 9);
+    bool test_result = uint8_array_equal(expected, actual, 9);
+    ASSERT_TRUE("Sobel Naive Basic Test", test_result);
+    if (!test_result) {
+        print_matrix_test_details(expected, actual, 9);
+    }
 }
 
 void test_sobel_kernel_unroll_V2(void){
@@ -35,11 +35,13 @@ void test_sobel_kernel_unroll_V2(void){
 
     sobel_kernel_unroll_V2(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
-    for (size_t i = 0; i < 9; i++){
-        printf("expected:%d, got: %d\n",expected[i], actual[i]);
-    }
 
-    assert_uint8_array_equal(expected, actual, 9);
+
+    bool test_result = uint8_array_equal(expected, actual, 9);
+    ASSERT_TRUE("Sobel V2 Basic Test", test_result);
+    if (!test_result) {
+        print_matrix_test_details(expected, actual, 9);
+    }
 }
 
 void test_sobel_SIMD_V3(void) {
@@ -57,11 +59,11 @@ void test_sobel_SIMD_V3(void) {
 
     sobel_SIMD_V3(img, 4, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
-    for (size_t i = 0; i < 12; i++){
-        printf("expected:%d, got: %d\n",expected[i], actual[i]);
+    bool test_result = uint8_array_equal(expected, actual, 12);
+    ASSERT_TRUE("Sobel V3 Basic Test", test_result);
+    if (!test_result) {
+        print_matrix_test_details(expected, actual, 12);
     }
-
-    assert_uint8_array_equal(expected, actual, 9);
 }
 
 void test_sobel_squareroot_lookup_V1(void) {
@@ -78,11 +80,11 @@ void test_sobel_squareroot_lookup_V1(void) {
 
     sobel_squareroot_lookup_V1(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
-    /*for (size_t i = 0; i < 9; i++){
-        printf("%d\n", actual[i]);
-    }*/
-
-    assert_uint8_array_equal(expected, actual, 9);
+    bool test_result = uint8_array_equal(expected, actual, 9);
+    ASSERT_TRUE("Sobel V1 Basic Test", test_result);
+    if (!test_result) {
+        print_matrix_test_details(expected, actual, 9);
+    }
 
 }
 
@@ -104,6 +106,10 @@ void test_sobel_separated_convolution_V4(void) {
         printf("%d\n", actual[i]);
     }*/
 
-    assert_uint8_array_equal(expected, actual, 9);
+    bool test_result = uint8_array_equal(expected, actual, 9);
+    ASSERT_TRUE("Sobel V4 Basic Test", test_result);
+    if (!test_result) {
+        print_matrix_test_details(expected, actual, 9);
+    }
 
 }
