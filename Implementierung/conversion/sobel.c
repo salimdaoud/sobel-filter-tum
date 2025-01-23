@@ -85,11 +85,11 @@ void sobel_kernel_unroll_V2( const uint8_t* img, size_t width, size_t height,
             uint8_t bot_right = (gray_y < last_row && gray_x < last_column) ? image_row_next[gray_x + 1] : 0;
 
             // Calculate gradient_vert and gradient_hor
-            gradient_vert = top_left + (left << 1) + bot_left
-                            - top_right - (right << 1) - bot_right;
+            gradient_vert = top_left + left + left + bot_left
+                            - top_right - right - right - bot_right;
 
-            gradient_hor = top_left + (top << 1) + top_right
-                            - bot_left - (bottom << 1) - bot_right;
+            gradient_hor = top_left + top + top + top_right
+                            - bot_left - bottom - bottom - bot_right;
 
             int sum = gradient_vert * gradient_vert + gradient_hor * gradient_hor;
             uint8_t magnitude;
@@ -110,7 +110,7 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
                 float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*)tmp;
-    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale_simd_8_pixels(img, width, height, a, b, c, grayscale_image);
 
     size_t row_offset = 0;
 
@@ -707,7 +707,6 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
     int* temporary_sum_2_start = temporary_sum_2;
     uint8_t* result_start = result;
 
-
     size_t row_indices[height];
     size_t current_pixel = 0;
     int sum = 0;
@@ -726,7 +725,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
                 sum = grayscale_image[current_pixel - 1];
                 sum2 = -grayscale_image[current_pixel - 1];
             }
-            sum += (grayscale_image[current_pixel] << 1);
+            sum += grayscale_image[current_pixel] * 2;
             if (gray_x + 1 < width) {
                 sum += grayscale_image[current_pixel + 1];
                 sum2 += grayscale_image[current_pixel + 1];
@@ -745,7 +744,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
         sum = 0;
         sum2 = 0;
 
-        sum2 += (temporary_sum_2[gray_x] << 1);
+        sum2 += temporary_sum_2[gray_x] * 2;
 
         sum += temporary_sum[gray_x + width];
         sum2 += temporary_sum_2[gray_x + width];
@@ -767,7 +766,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
             sum = -temporary_sum[current_pixel - width];
             sum2 = temporary_sum_2[current_pixel - width];
 
-            sum2 += (temporary_sum_2[current_pixel] << 1);
+            sum2 += temporary_sum_2[current_pixel] * 2;
 
             sum += temporary_sum[current_pixel + width];
             sum2 += temporary_sum_2[current_pixel + width];
@@ -790,7 +789,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
         sum = -temporary_sum[current_pixel - width];
         sum2 = temporary_sum_2[current_pixel - width];
 
-        sum2 += (temporary_sum_2[current_pixel] << 1);
+        sum2 += temporary_sum_2[current_pixel] * 2;
 
         int pixel_sum = sum * sum + sum2 * sum2;
         if (pixel_sum < 65025) {
@@ -800,6 +799,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
         }
     }
 
+    // reset the result pointer
     result = result_start;
 
     free(temporary_sum);
