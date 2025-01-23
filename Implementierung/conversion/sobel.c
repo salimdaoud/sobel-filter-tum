@@ -295,38 +295,15 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
         __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
         __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
 
-        if (gray_x >= width - 4) {
-            if (gray_x == width - 4) {
-            // Write only the first 3 values
-                    uint8_t temp[4];
-                    _mm_storeu_si32((__m128i*) temp, pack_8);
-                    result[row_offset + gray_x] = (uint8_t) temp[0];
-                    result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                    result[row_offset + gray_x + 2] = (uint8_t) temp[2];
-                    result[row_offset + gray_x + 3] = (uint8_t) temp[3];
+        uint8_t temp[8] = {0};
+
+        if (gray_x >= width - 8) {
+            _mm_storeu_si16((__m128i*) temp, pack_8);
+            size_t remaining_pixels = width - gray_x;
+            for (size_t i = 0; i < remaining_pixels; i++) {
+                result[row_offset + gray_x + i] = temp[i];
             }
-            if (gray_x == width - 3) {
-                    // Write only the first 3 values
-                    uint8_t temp[4];
-                    _mm_storeu_si32((__m128i*) temp, pack_8);
-                    result[row_offset + gray_x] = (uint8_t) temp[0];
-                    result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                    result[row_offset + gray_x + 2] = (uint8_t) temp[2];
-                }
-                if (gray_x == width - 2) {
-                    uint8_t temp[4];
-                    _mm_storeu_si32((__m128i*) temp, pack_8);
-                    result[row_offset + gray_x] = (uint8_t) temp[0];
-                    result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                }
-                if (gray_x == width - 1) {
-                    // Write only the first value
-                    uint8_t temp[4];
-                    _mm_storeu_si32((__m128i*) temp, pack_8);
-                    result[row_offset + gray_x] = (uint8_t) temp[0];
-                }
         } else {
-            // Store the result
             _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
         }
     }
@@ -360,11 +337,6 @@ void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
             __m128i top_left = _mm_setzero_si128();
             __m128i top = _mm_setzero_si128();
             __m128i top_right = _mm_setzero_si128();
-            __m128i left = _mm_setzero_si128();
-            __m128i right = _mm_setzero_si128();
-            __m128i bot_left = _mm_setzero_si128();
-            __m128i bot = _mm_setzero_si128();
-            __m128i bot_right = _mm_setzero_si128();
 
             if (gray_y > 0) {
                 top_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x - 1)),
@@ -374,16 +346,15 @@ void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
                 top_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x + 1)),
                                               _mm_setzero_si128());
             }
-            left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x - 1)),
+            __m128i left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x - 1)),
                                             _mm_setzero_si128());
-            right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x + 1)),
+            __m128i right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x + 1)),
                                      _mm_setzero_si128());
-
-            bot_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x - 1)),
+            __m128i bot_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x - 1)),
                                         _mm_setzero_si128());
-            bot = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x)),
+            __m128i bot = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x)),
                                          _mm_setzero_si128());
-            bot_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x + 1)),
+            __m128i bot_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x + 1)),
                                          _mm_setzero_si128());
 
             if (gray_x == 0) {
@@ -487,6 +458,8 @@ void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
                                                  _mm_add_epi16(_mm_add_epi16(bot, bot),
                                                  bot_right)))); // negative values
 
+            // We must use 32 bit values now as the squared values can be larger than 16 bit and we could not detect
+            // overflows correctly.
             __m128i gradient_vert_low = _mm_unpacklo_epi16(gradient_vert, _mm_setzero_si128());
             __m128i gradient_vert_high = _mm_unpackhi_epi16(gradient_vert, _mm_setzero_si128());
 
@@ -503,43 +476,23 @@ void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
             __m128i squared_sum_low = _mm_add_epi32(squared_vert_low, squared_hor_low);
             __m128i squared_sum_high = _mm_add_epi32(squared_vert_high, squared_hor_high);
 
+            __m128 squared_sum_float = _mm_cvtepi32_ps(squared_sum_low);
+            __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
 
-            __m128i threshold = _mm_set1_epi32(65025);
-            __m128i cmp_result_low = _mm_cmpgt_epi32(squared_sum_low, threshold);
+            // Clamp to 255 and convert to 8-bit integer
+            __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
+            __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
+            __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
 
-            if (__builtin_expect(_mm_test_all_ones(cmp_result_low), 0)) {
-                __m128i max_value = _mm_set1_epi8(255);
-                _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), max_value);
-            } else {
-                // Convert to float and compute the square root
-                __m128 squared_sum_float = _mm_cvtepi32_ps(squared_sum_low);
-                __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
+            _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
+            squared_sum_float = _mm_cvtepi32_ps(squared_sum_high);
+            gradient_float = _mm_sqrt_ps(squared_sum_float);
 
-                // Clamp to 255 and convert to 8-bit integer
-                __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
-                __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
-                __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
-
-                _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
-            }
-
-            __m128i cmp_result_high = _mm_cmpgt_epi32(squared_sum_high, threshold);
-
-            if (__builtin_expect(_mm_test_all_ones(cmp_result_high), 0)) {
-                __m128i max_value = _mm_set1_epi8(255);
-                _mm_storel_epi64((__m128i*) (result + row_offset + gray_x + 4), max_value);
-            } else {
-                // Convert to float and compute the square root
-                __m128 squared_sum_float = _mm_cvtepi32_ps(squared_sum_high);
-                __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
-
-                // Clamp to 255 and convert to 8-bit integer
-                __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
-                __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
-                __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
-
-                _mm_storel_epi64((__m128i*) (result + row_offset + gray_x + 4), pack_8);
-            }
+            // Clamp to 255 and convert to 8-bit integer
+            gradient_i = _mm_cvtps_epi32(gradient_float);
+            pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
+            pack_8 = _mm_packus_epi16(pack_16, pack_16);
+            _mm_storel_epi64((__m128i*) (result + row_offset + gray_x + 4), pack_8);
 
         }
         image_row_prev += width;
@@ -554,9 +507,6 @@ void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
         __m128i top_left = _mm_setzero_si128();
         __m128i top = _mm_setzero_si128();
         __m128i top_right = _mm_setzero_si128();
-        __m128i left = _mm_setzero_si128();
-        __m128i right = _mm_setzero_si128();
-
 
         if (height > 1) {
             top_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x - 1)),
@@ -566,9 +516,9 @@ void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
             top_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x + 1)),
                                           _mm_setzero_si128());
         }
-        left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x - 1)),
+        __m128i left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x - 1)),
                                  _mm_setzero_si128());
-        right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x + 1)),
+        __m128i right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x + 1)),
                                   _mm_setzero_si128());
 
         if (gray_x == 0) {
@@ -655,85 +605,15 @@ void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
         __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
         __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
 
-        if (gray_x >= width - 8) {
-            if (gray_x == width - 8) {
-                // Write only the first 3 values
-                uint8_t temp[8];
-                _mm_storeu_si16((__m128i*) temp, pack_8);
-                result[row_offset + gray_x] = (uint8_t) temp[0];
-                result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                result[row_offset + gray_x + 2] = (uint8_t) temp[2];
-                result[row_offset + gray_x + 3] = (uint8_t) temp[3];
-                result[row_offset + gray_x + 4] = (uint8_t) temp[4];
-                result[row_offset + gray_x + 5] = (uint8_t) temp[5];
-                result[row_offset + gray_x + 6] = (uint8_t) temp[6];
-                result[row_offset + gray_x + 7] = (uint8_t) temp[7];
+        uint8_t temp[8] = {0};
 
-            }
-            if (gray_x == width - 7) {
-                // Write only the first 3 values
-                uint8_t temp[8];
-                _mm_storeu_si32((__m128i*) temp, pack_8);
-                result[row_offset + gray_x] = (uint8_t) temp[0];
-                result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                result[row_offset + gray_x + 2] = (uint8_t) temp[2];
-                result[row_offset + gray_x + 3] = (uint8_t) temp[3];
-                result[row_offset + gray_x + 4] = (uint8_t) temp[4];
-                result[row_offset + gray_x + 5] = (uint8_t) temp[5];
-                result[row_offset + gray_x + 6] = (uint8_t) temp[6];
-            }
-            if (gray_x == width - 6) {
-                // Write only the first 3 values
-                uint8_t temp[8];
-                _mm_storeu_si32((__m128i*) temp, pack_8);
-                result[row_offset + gray_x] = (uint8_t) temp[0];
-                result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                result[row_offset + gray_x + 2] = (uint8_t) temp[2];
-                result[row_offset + gray_x + 3] = (uint8_t) temp[3];
-                result[row_offset + gray_x + 4] = (uint8_t) temp[4];
-                result[row_offset + gray_x + 5] = (uint8_t) temp[5];
-            }
-            if (gray_x == width - 5) {
-                // Write only the first 3 values
-                uint8_t temp[8];
-                _mm_storeu_si32((__m128i*) temp, pack_8);
-                result[row_offset + gray_x] = (uint8_t) temp[0];
-                result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                result[row_offset + gray_x + 2] = (uint8_t) temp[2];
-                result[row_offset + gray_x + 3] = (uint8_t) temp[3];
-                result[row_offset + gray_x + 4] = (uint8_t) temp[4];
-            }
-            if (gray_x == width - 4) {
-                // Write only the first 3 values
-                uint8_t temp[8];
-                _mm_storeu_si32((__m128i*) temp, pack_8);
-                result[row_offset + gray_x] = (uint8_t) temp[0];
-                result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                result[row_offset + gray_x + 2] = (uint8_t) temp[2];
-                result[row_offset + gray_x + 3] = (uint8_t) temp[3];
-            }
-            if (gray_x == width - 3) {
-                // Write only the first 3 values
-                uint8_t temp[8];
-                _mm_storeu_si32((__m128i*) temp, pack_8);
-                result[row_offset + gray_x] = (uint8_t) temp[0];
-                result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                result[row_offset + gray_x + 2] = (uint8_t) temp[2];
-            }
-            if (gray_x == width - 2) {
-                uint8_t temp[8];
-                _mm_storeu_si32((__m128i*) temp, pack_8);
-                result[row_offset + gray_x] = (uint8_t) temp[0];
-                result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-            }
-            if (gray_x == width - 1) {
-                // Write only the first value
-                uint8_t temp[8];
-                _mm_storeu_si32((__m128i*) temp, pack_8);
-                result[row_offset + gray_x] = (uint8_t) temp[0];
+        if (gray_x >= width - 8) {
+            _mm_storeu_si16((__m128i*) temp, pack_8);
+            size_t remaining_pixels = width - gray_x;
+            for (size_t i = 0; i < remaining_pixels; i++) {
+                result[row_offset + gray_x + i] = temp[i];
             }
         } else {
-            // Store the result
             _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
         }
     }

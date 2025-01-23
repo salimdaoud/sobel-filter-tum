@@ -2,8 +2,6 @@
 #define READWRITE_H
 
 #include <unistd.h>
-
-
 #include <stddef.h>
 #include <stdint-gcc.h>
 #include <stdio.h>
@@ -13,9 +11,7 @@
 #include <pthread.h>
 #include <sys/mman.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <stdbool.h>
-#include <unistd.h>
 #include <errno.h>
 #include <bits/time.h>
 #include <time.h>

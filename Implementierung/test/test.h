@@ -4,16 +4,13 @@
 #include "../conversion/grayscale.h"
 #include "../conversion/sobel.h"
 
-extern const char* test_name;
-extern const char* assertion;
-extern const char* file;
 extern const char* function_name;
+extern const char* file;
 extern int global_total_tests;
 extern int global_failed_tests;
 
 #define ASSERT_TRUE(test_name, expression)\
   do {\
-    assertion = #expression;\
     file = __FILE__;\
     function_name = __FUNCTION__;\
     if(expression) {\

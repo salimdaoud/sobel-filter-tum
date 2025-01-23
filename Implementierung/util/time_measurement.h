@@ -18,6 +18,4 @@ void end_time_measurement(char* function_name);
 
 void clean_up_time_measurement();
 
-
-
-#endif //PROJEKT_TIME_MEASUREMENT_H
+#endif

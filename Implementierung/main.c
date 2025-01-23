@@ -10,9 +10,8 @@
 int main(int argc, char* argv[]) {
 
     struct ParsedArgs args;
-    //size_t repetitions = 1; //args.repetitions TODO: fix arg parser
 
-    // Parse arguments
+    // Parse command line arguments.
     if (arg_parser(argc, argv, &args) == -1) {
         return EXIT_FAILURE;
     }
@@ -24,10 +23,10 @@ int main(int argc, char* argv[]) {
     int width, height;
     uint8_t* rgbData = NULL;
 
-    // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy
+    // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy.
     read_ppm_file(args.input_file, &width, &height, &rgbData, true);
 
-    // Allocate temporary buffer for grayscale and output buffer for edges
+    // Allocate temporary buffer for grayscale and output buffer for the sobel filter result.
     uint8_t* tmp = malloc(width * height);
     uint8_t* result = malloc(width * height);
 
@@ -136,6 +135,7 @@ int main(int argc, char* argv[]) {
 
     // Write result to PGM
     if (args.output_file != NULL){
+        // TODO: decide how to treat read write threading
         write_pgm_file(args.output_file, result, width, height, true);
     } else {
         args.output_file = malloc(strlen(args.input_file) + 1 );
@@ -148,10 +148,11 @@ int main(int argc, char* argv[]) {
         if (dot != NULL) {
             strcpy(dot, ".pgm"); // Replace the extension
         }
-            write_pgm_file(args.output_file, result, width, height, false);
+        // TODO: decide how to treat read write threading
+        write_pgm_file(args.output_file, result, width, height, false);
     }
 
-    // Free memory
+    // Free memory.
     clean_up_time_measurement();
     free(rgbData);
     free(tmp);
@@ -181,6 +182,7 @@ int main(int argc, char* argv[]) {
         test_read_ppm_correct_file();
         test_read_ppm_correct_file_parallel();
         test_read_ppm_incorrect_file();
+        // TODO: fix read write tests and adapt them to fit into test scheme
         // test_write_pgm_file();
         // test_read_ppm_incorrect_file_maxval();
 
@@ -190,6 +192,10 @@ int main(int argc, char* argv[]) {
                test_result ? "FAILED" : "SUCCESSFUL",
                global_total_tests - global_failed_tests,
                global_total_tests, global_failed_tests);
+
+        // This doesn't have any effect but suppressing a compiler warning.
+        (void) function_name;
+        (void) file;
     }
     
     

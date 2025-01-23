@@ -1,6 +1,5 @@
 #include "readwrite.h"
 
-
 // Main function: Read PPM file sequentially.
 void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pixel_rgb_data, bool use_io_threading) {
     // Open and validate the file

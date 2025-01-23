@@ -1,9 +1,7 @@
 #include "test.h"
 
-const char *test_name = "";
-const char *assertion = "";
-const char *file = "";
-const char* function_name = "";
+const char* file = NULL;
+const char* function_name = NULL;
 int global_total_tests = 0;
 int global_failed_tests = 0;
 
@@ -15,7 +13,6 @@ bool uint8_array_equal(const uint8_t* expected, const uint8_t* actual, size_t si
     }
     return true;
 }
-
 
 bool int_equal(int expected, int actual) {
     if (expected != actual) {
