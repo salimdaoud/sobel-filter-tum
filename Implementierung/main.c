@@ -45,7 +45,6 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-   
     switch (args.version_flag) {
         case 1:
             printf("Squareroot lookup Sobel implementation used.\n");
@@ -165,7 +164,7 @@ int main(int argc, char* argv[]) {
         #include "test/readwrite_test.h"
         #include "test/grayscale_test.h"
 
-        putchar('\n');
+        printf("\n");
 
         // Grayscale functions.
         test_img_to_grayscale_naive();
@@ -194,7 +193,9 @@ int main(int argc, char* argv[]) {
 
         int test_result = (global_failed_tests != 0);
 
-        printf("\nTest Run %s: %d of %d passed. %d failed.\n",
+        printf("============================================================================================"
+               "======================\n"
+               "Test Run %s: %d of %d passed. %d failed.\n",
                test_result ? "FAILED" : "SUCCESSFUL",
                global_total_tests - global_failed_tests,
                global_total_tests, global_failed_tests);
