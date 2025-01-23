@@ -43,7 +43,7 @@ void test_read_ppm_correct_file_parallel(void) {
 }
 
 //width and height do not correspond to given pixels
-void test_read_ppm_incorrcet_file(void) {
+void test_read_ppm_incorrect_file(void) {
     char file_data[] =  "test/binary_incorrect_file.ppm";
     int width, height;
     uint8_t* pixel_rgb_data;
@@ -58,7 +58,7 @@ void test_read_ppm_incorrcet_file(void) {
 
 //max_val is is less than 0 or greater 255
 // does this make sense? -> uint8
-void test_read_ppm_incorrcet_file_maxval(void) {
+void test_read_ppm_incorrect_file_maxval(void) {
     char file_data[] =  "test/binary_incorrect_file_maxval.ppm";
     int width, height;
     uint8_t* pixel_rgb_data;

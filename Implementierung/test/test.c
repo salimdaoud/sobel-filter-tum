@@ -26,9 +26,9 @@ bool int_equal(int expected, int actual) {
 
 void print_matrix_test_details(uint8_t* expected, uint8_t* actual, size_t size) {
     printf("%-12s %-25s\n", "", "Details:");
-    printf("%-20s %-3s %-12s %5s\n","", "", "Expected:", "Got:");
-    for (size_t i = 0; i < 9; i++){
-        printf("%-20s [%zu]%-4s %5d %8d\n","", i, "", expected[i], actual[i]);
+    printf("%-20s %3s %10s %7s\n","", "", "Expected:", "Got:");
+    for (size_t i = 0; i < size; i++){
+        printf("%-20s [%2zu] %9d %7d\n","", i, expected[i], actual[i]);
     }
     printf("\n");
 }

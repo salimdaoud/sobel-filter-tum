@@ -176,13 +176,13 @@ int main(int argc, char* argv[]) {
         test_sobel_SIMD_V3();
         test_sobel_squareroot_lookup_V1();
         test_sobel_separated_convolution_V4();
-        //test_parse_ppm_header_correct_header();
-        //test_parse_ppm_header_incorrect_header();
-        //test_read_ppm_correct_file();
-        //test_read_ppm_correct_file_parallel();
-        //test_read_ppm_incorrcet_file();
-        //test_write_pgm_file();
-        //test_read_ppm_incorrcet_file_maxval();
+        test_parse_ppm_header_correct_header();
+        test_parse_ppm_header_incorrect_header();
+        test_read_ppm_correct_file();
+        test_read_ppm_correct_file_parallel();
+        test_read_ppm_incorrect_file();
+        // test_write_pgm_file();
+        // test_read_ppm_incorrect_file_maxval();
 
         int test_result = (global_failed_tests != 0);
 
