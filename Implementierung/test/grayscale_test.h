@@ -14,4 +14,6 @@ void test_img_to_grayscale(void);
 
 void test_img_to_grayscale_bitshift(void);
 
+void test_img_to_grayscale_SIMD_8_pixels(void);
+
 #endif

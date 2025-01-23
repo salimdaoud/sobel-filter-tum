@@ -65,7 +65,7 @@ void img_to_grayscale(const uint8_t* img, size_t width, size_t height, float a, 
 void img_to_grayscale_bitshift(const uint8_t* img, size_t width, size_t height,
                                float a, float b, float c, uint8_t* gray){
 
-    printf("WARNING: The grayscale coefficients are only roughly approximated: Red (0.25), Green (0.5)+"
+    printf("WARNING: The grayscale coefficients are only roughly approximated: Red (0.25), Green (0.5)"
            " Blue (0.25).\nGiven coefficients for Red (%1.3f), Green (%1.3f) and Blue (%1.3f) will not be used.\n", a, b, c);
 
     size_t rgb_values_count = width * height * 3;
