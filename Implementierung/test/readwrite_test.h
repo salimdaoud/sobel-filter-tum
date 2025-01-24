@@ -12,10 +12,10 @@ void test_read_ppm_correct_file(void);
 
 void test_read_ppm_correct_file_parallel(void);
 
-void test_read_ppm_incorrcet_file(void);
+void test_read_ppm_incorrect_file(void);
 
 void test_write_pgm_file(void);
 
-void test_read_ppm_incorrcet_file_maxval(void);
+void test_read_ppm_incorrect_file_maxval(void);
 
 #endif

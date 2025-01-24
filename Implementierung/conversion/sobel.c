@@ -58,7 +58,7 @@ void sobel_kernel_unroll_V2( const uint8_t* img, size_t width, size_t height,
                          float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*) tmp;
-    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale_simd_8_pixels(img, width, height, a, b, c, grayscale_image);
 
     uint8_t* image_row_prev = grayscale_image - width;
     uint8_t* image_row_now = grayscale_image;
@@ -85,11 +85,11 @@ void sobel_kernel_unroll_V2( const uint8_t* img, size_t width, size_t height,
             uint8_t bot_right = (gray_y < last_row && gray_x < last_column) ? image_row_next[gray_x + 1] : 0;
 
             // Calculate gradient_vert and gradient_hor
-            gradient_vert = top_left + (left << 1) + bot_left
-                            - top_right - (right << 1) - bot_right;
+            gradient_vert = top_left + left + left + bot_left
+                            - top_right - right - right - bot_right;
 
-            gradient_hor = top_left + (top << 1) + top_right
-                            - bot_left - (bottom << 1) - bot_right;
+            gradient_hor = top_left + top + top + top_right
+                            - bot_left - bottom - bottom - bot_right;
 
             int sum = gradient_vert * gradient_vert + gradient_hor * gradient_hor;
             uint8_t magnitude;
@@ -110,7 +110,7 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
                 float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*)tmp;
-    img_to_grayscale_naive(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale_simd_8_pixels(img, width, height, a, b, c, grayscale_image);
 
     size_t row_offset = 0;
 
@@ -123,7 +123,6 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
     __m128i zero_mask_keep_first_4_byte = _mm_set_epi32(0x00000000, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF);
     __m128i zero_mask_keep_first_3_byte = _mm_set_epi32(0x00000000, 0x00000000, 0x0000FFFF, 0xFFFFFFFF);
     __m128i zero_mask_keep_first_2_byte = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF);
-    __m128i zero_mask_keep_first_1_byte = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0x0000FFFF);
 
     for (size_t gray_y = 0; gray_y < (height - 1); gray_y++) {
         row_offset = gray_y * width;
@@ -296,38 +295,325 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
         __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
         __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
 
-        if (gray_x >= width - 4) {
-            if (gray_x == width - 4) {
-            // Write only the first 3 values
-                    uint8_t temp[4];
-                    _mm_storeu_si32((__m128i*) temp, pack_8);
-                    result[row_offset + gray_x] = (uint8_t) temp[0];
-                    result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                    result[row_offset + gray_x + 2] = (uint8_t) temp[2];
-                    result[row_offset + gray_x + 3] = (uint8_t) temp[3];
+        uint8_t temp[8] = {0};
+
+        if (gray_x >= width - 8) {
+            _mm_storeu_si16((__m128i*) temp, pack_8);
+            size_t remaining_pixels = width - gray_x;
+            for (size_t i = 0; i < remaining_pixels; i++) {
+                result[row_offset + gray_x + i] = temp[i];
             }
-            if (gray_x == width - 3) {
-                    // Write only the first 3 values
-                    uint8_t temp[4];
-                    _mm_storeu_si32((__m128i*) temp, pack_8);
-                    result[row_offset + gray_x] = (uint8_t) temp[0];
-                    result[row_offset + gray_x + 1] = (uint8_t) temp[1];
-                    result[row_offset + gray_x + 2] = (uint8_t) temp[2];
+        } else {
+            _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
+        }
+    }
+}
+
+void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
+                   float a, float b, float c, void* tmp, uint8_t* result) {
+
+    uint8_t* grayscale_image = (uint8_t*) tmp;
+    img_to_grayscale_simd_8_pixels(img, width, height, a, b, c, grayscale_image);
+
+    size_t row_offset = 0;
+
+    uint8_t* image_row_prev = grayscale_image - width;
+    uint8_t* image_row_now = grayscale_image;
+    uint8_t* image_row_next = grayscale_image + width;
+
+    __m128i zero_mask_drop_first_1_word = _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF0000);
+    __m128i zero_mask_drop_last_1_word = _mm_set_epi32(0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+    __m128i zero_mask_drop_last_2_word = _mm_set_epi32(0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+    __m128i zero_mask_drop_last_3_word = _mm_set_epi32(0x00000000, 0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+    __m128i zero_mask_drop_last_4_word = _mm_set_epi32(0x00000000, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF);
+    __m128i zero_mask_drop_last_5_word = _mm_set_epi32(0x00000000, 0x00000000, 0x0000FFFF, 0xFFFFFFFF);
+    __m128i zero_mask_drop_last_6_word = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF);
+    __m128i zero_mask_drop_last_7_word = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0x0000FFFF);
+
+    for (size_t gray_y = 0; gray_y < (height - 1); gray_y++) {
+        row_offset = gray_y * width;
+        for (size_t gray_x = 0; gray_x < width; gray_x += 8) {
+
+            __m128i top_left = _mm_setzero_si128();
+            __m128i top = _mm_setzero_si128();
+            __m128i top_right = _mm_setzero_si128();
+
+            if (gray_y > 0) {
+                top_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x - 1)),
+                                             _mm_setzero_si128());
+                top = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x)),
+                                        _mm_setzero_si128());
+                top_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x + 1)),
+                                              _mm_setzero_si128());
+            }
+            __m128i left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x - 1)),
+                                            _mm_setzero_si128());
+            __m128i right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x + 1)),
+                                     _mm_setzero_si128());
+            __m128i bot_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x - 1)),
+                                        _mm_setzero_si128());
+            __m128i bot = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x)),
+                                         _mm_setzero_si128());
+            __m128i bot_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x + 1)),
+                                         _mm_setzero_si128());
+
+            if (gray_x == 0) {
+                top_left = _mm_and_si128(top_left, zero_mask_drop_first_1_word);
+                left = _mm_and_si128(left, zero_mask_drop_first_1_word);
+                bot_left = _mm_and_si128(bot_left, zero_mask_drop_first_1_word);
+            }
+
+            if (__builtin_expect((gray_x >= width - 8), 0)) {
+                if (gray_x == width - 8) {
+                    top = _mm_and_si128(top, zero_mask_drop_last_1_word);
+                    bot = _mm_and_si128(bot, zero_mask_drop_last_1_word);
+                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_2_word);
+                    right = _mm_and_si128(right, zero_mask_drop_last_2_word);
+                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_2_word);
+                }
+                if (gray_x == width - 7) {
+                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_1_word);
+                    left = _mm_and_si128(left, zero_mask_drop_last_1_word);
+                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_1_word);
+                    top = _mm_and_si128(top, zero_mask_drop_last_2_word);
+                    bot = _mm_and_si128(bot, zero_mask_drop_last_2_word);
+                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_3_word);
+                    right = _mm_and_si128(right, zero_mask_drop_last_3_word);
+                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_3_word);
+                }
+                if (gray_x == width - 6) {
+                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_2_word);
+                    left = _mm_and_si128(left, zero_mask_drop_last_2_word);
+                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_2_word);
+                    top = _mm_and_si128(top, zero_mask_drop_last_3_word);
+                    bot = _mm_and_si128(bot, zero_mask_drop_last_3_word);
+                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_4_word);
+                    right = _mm_and_si128(right, zero_mask_drop_last_4_word);
+                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_4_word);
+                }
+                if (gray_x == width - 5) {
+                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_3_word);
+                    left = _mm_and_si128(left, zero_mask_drop_last_3_word);
+                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_3_word);
+                    top = _mm_and_si128(top, zero_mask_drop_last_4_word);
+                    bot = _mm_and_si128(bot, zero_mask_drop_last_4_word);
+                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_5_word);
+                    right = _mm_and_si128(right, zero_mask_drop_last_5_word);
+                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_5_word);
+                }
+                if (gray_x == width - 4) {
+                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_4_word);
+                    left = _mm_and_si128(left, zero_mask_drop_last_4_word);
+                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_4_word);
+                    top = _mm_and_si128(top, zero_mask_drop_last_5_word);
+                    bot = _mm_and_si128(bot, zero_mask_drop_last_5_word);
+                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_6_word);
+                    right = _mm_and_si128(right, zero_mask_drop_last_6_word);
+                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_6_word);
+                }
+                if (gray_x == width - 3) {
+                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_5_word);
+                    left = _mm_and_si128(left, zero_mask_drop_last_5_word);
+                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_5_word);
+                    top = _mm_and_si128(top, zero_mask_drop_last_6_word);
+                    bot = _mm_and_si128(bot, zero_mask_drop_last_6_word);
+                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_7_word);
+                    right = _mm_and_si128(right, zero_mask_drop_last_7_word);
+                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_7_word);
                 }
                 if (gray_x == width - 2) {
-                    uint8_t temp[4];
-                    _mm_storeu_si32((__m128i*) temp, pack_8);
-                    result[row_offset + gray_x] = (uint8_t) temp[0];
-                    result[row_offset + gray_x + 1] = (uint8_t) temp[1];
+                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_6_word);
+                    left = _mm_and_si128(left, zero_mask_drop_last_6_word);
+                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_6_word);
+                    top = _mm_and_si128(top, zero_mask_drop_last_7_word);
+                    bot = _mm_and_si128(bot, zero_mask_drop_last_7_word);
+                    top_right = _mm_setzero_si128();
+                    right = _mm_setzero_si128();
+                    bot_right = _mm_setzero_si128();
                 }
                 if (gray_x == width - 1) {
-                    // Write only the first value
-                    uint8_t temp[4];
-                    _mm_storeu_si32((__m128i*) temp, pack_8);
-                    result[row_offset + gray_x] = (uint8_t) temp[0];
+                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_7_word);
+                    left = _mm_and_si128(left, zero_mask_drop_last_7_word);
+                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_7_word);
+                    top = _mm_setzero_si128();
+                    bot = _mm_setzero_si128();
+                    top_right = _mm_setzero_si128();
+                    right = _mm_setzero_si128();
+                    bot_right = _mm_setzero_si128();
                 }
+            }
+
+            // Calculate gradient_vert and gradient_hor
+            __m128i gradient_vert = _mm_abs_epi16(_mm_sub_epi16(_mm_add_epi16(top_left,
+                                                  _mm_add_epi16(left, _mm_add_epi16(left,
+                                                  bot_left))), // positive values
+                                                  _mm_add_epi16(top_right,
+                                                  _mm_add_epi16(_mm_add_epi16(right, right),
+                                                  bot_right)))); // negative values
+
+            __m128i gradient_hor = _mm_abs_epi16(_mm_sub_epi16(_mm_add_epi16(top_left,
+                                                 _mm_add_epi16(top, _mm_add_epi16(top,
+                                                 top_right))), // positive values
+                                                 _mm_add_epi16(bot_left,
+                                                 _mm_add_epi16(_mm_add_epi16(bot, bot),
+                                                 bot_right)))); // negative values
+
+            // We must use 32 bit values now as the squared values can be larger than 16 bit and we could not detect
+            // overflows correctly.
+            __m128i gradient_vert_low = _mm_unpacklo_epi16(gradient_vert, _mm_setzero_si128());
+            __m128i gradient_vert_high = _mm_unpackhi_epi16(gradient_vert, _mm_setzero_si128());
+
+            __m128i gradient_hor_low = _mm_unpacklo_epi16(gradient_hor, _mm_setzero_si128());
+            __m128i gradient_hor_high = _mm_unpackhi_epi16(gradient_hor, _mm_setzero_si128());
+
+            // Compute squared sum for gradient_vert and gradient_hor
+            __m128i squared_vert_low = _mm_mullo_epi32(gradient_vert_low, gradient_vert_low);
+            __m128i squared_vert_high = _mm_mullo_epi32(gradient_vert_high, gradient_vert_high);
+
+            __m128i squared_hor_low = _mm_mullo_epi32(gradient_hor_low, gradient_hor_low);
+            __m128i squared_hor_high = _mm_mullo_epi32(gradient_hor_high, gradient_hor_high);
+
+            __m128i squared_sum_low = _mm_add_epi32(squared_vert_low, squared_hor_low);
+            __m128i squared_sum_high = _mm_add_epi32(squared_vert_high, squared_hor_high);
+
+            __m128 squared_sum_float = _mm_cvtepi32_ps(squared_sum_low);
+            __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
+
+            // Clamp to 255 and convert to 8-bit integer
+            __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
+            __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
+            __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
+
+            _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
+            squared_sum_float = _mm_cvtepi32_ps(squared_sum_high);
+            gradient_float = _mm_sqrt_ps(squared_sum_float);
+
+            // Clamp to 255 and convert to 8-bit integer
+            gradient_i = _mm_cvtps_epi32(gradient_float);
+            pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
+            pack_8 = _mm_packus_epi16(pack_16, pack_16);
+            _mm_storel_epi64((__m128i*) (result + row_offset + gray_x + 4), pack_8);
+
+        }
+        image_row_prev += width;
+        image_row_now += width;
+        image_row_next += width;
+    }
+
+    // loop unroll for last row
+    for (size_t gray_x = 0; gray_x < width; gray_x += 4) {
+
+        row_offset = (height - 1) * width;
+        __m128i top_left = _mm_setzero_si128();
+        __m128i top = _mm_setzero_si128();
+        __m128i top_right = _mm_setzero_si128();
+
+        if (height > 1) {
+            top_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x - 1)),
+                                         _mm_setzero_si128());
+            top = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x)),
+                                    _mm_setzero_si128());
+            top_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x + 1)),
+                                          _mm_setzero_si128());
+        }
+        __m128i left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x - 1)),
+                                 _mm_setzero_si128());
+        __m128i right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x + 1)),
+                                  _mm_setzero_si128());
+
+        if (gray_x == 0) {
+            top_left = _mm_and_si128(top_left, zero_mask_drop_first_1_word);
+            left = _mm_and_si128(left, zero_mask_drop_first_1_word);
+        }
+
+        if (__builtin_expect((gray_x >= width - 8), 0)) {
+            if (gray_x == width - 8) {
+                top = _mm_and_si128(top, zero_mask_drop_last_1_word);
+                top_right = _mm_and_si128(top_right, zero_mask_drop_last_2_word);
+                right = _mm_and_si128(right, zero_mask_drop_last_2_word);
+            }
+            if (gray_x == width - 7) {
+                top_left = _mm_and_si128(top_left, zero_mask_drop_last_1_word);
+                left = _mm_and_si128(left, zero_mask_drop_last_1_word);
+                top = _mm_and_si128(top, zero_mask_drop_last_2_word);
+                top_right = _mm_and_si128(top_right, zero_mask_drop_last_3_word);
+                right = _mm_and_si128(right, zero_mask_drop_last_3_word);
+            }
+            if (gray_x == width - 6) {
+                top_left = _mm_and_si128(top_left, zero_mask_drop_last_2_word);
+                left = _mm_and_si128(left, zero_mask_drop_last_2_word);
+                top = _mm_and_si128(top, zero_mask_drop_last_3_word);
+                top_right = _mm_and_si128(top_right, zero_mask_drop_last_4_word);
+                right = _mm_and_si128(right, zero_mask_drop_last_4_word);
+            }
+            if (gray_x == width - 5) {
+                top_left = _mm_and_si128(top_left, zero_mask_drop_last_3_word);
+                left = _mm_and_si128(left, zero_mask_drop_last_3_word);
+                top = _mm_and_si128(top, zero_mask_drop_last_4_word);
+                top_right = _mm_and_si128(top_right, zero_mask_drop_last_5_word);
+                right = _mm_and_si128(right, zero_mask_drop_last_5_word);
+            }
+            if (gray_x == width - 4) {
+                top_left = _mm_and_si128(top_left, zero_mask_drop_last_4_word);
+                left = _mm_and_si128(left, zero_mask_drop_last_4_word);
+                top = _mm_and_si128(top, zero_mask_drop_last_5_word);
+                top_right = _mm_and_si128(top_right, zero_mask_drop_last_6_word);
+                right = _mm_and_si128(right, zero_mask_drop_last_6_word);
+            }
+            if (gray_x == width - 3) {
+                top_left = _mm_and_si128(top_left, zero_mask_drop_last_5_word);
+                left = _mm_and_si128(left, zero_mask_drop_last_5_word);
+                top = _mm_and_si128(top, zero_mask_drop_last_6_word);
+                top_right = _mm_and_si128(top_right, zero_mask_drop_last_7_word);
+                right = _mm_and_si128(right, zero_mask_drop_last_7_word);
+            }
+            if (gray_x == width - 2) {
+                top_left = _mm_and_si128(top_left, zero_mask_drop_last_6_word);
+                left = _mm_and_si128(left, zero_mask_drop_last_6_word);
+                top = _mm_and_si128(top, zero_mask_drop_last_7_word);
+                top_right = _mm_setzero_si128();
+                right = _mm_setzero_si128();
+            }
+            if (gray_x == width - 1) {
+                top_left = _mm_and_si128(top_left, zero_mask_drop_last_7_word);
+                left = _mm_and_si128(left, zero_mask_drop_last_7_word);
+                top = _mm_setzero_si128();
+                top_right = _mm_setzero_si128();
+                right = _mm_setzero_si128();
+            }
+        }
+
+        // Calculate gradient_vert and gradient_hor
+        __m128i gradient_vert = _mm_sub_epi32(_mm_add_epi32(top_left,
+                                                            _mm_add_epi32(left, left)),
+                                              _mm_add_epi32(top_right,
+                                                            _mm_add_epi32(right, right)));
+
+        __m128i gradient_hor = _mm_add_epi32(top_left,
+                                             _mm_add_epi32(top, _mm_add_epi32(top,
+                                                                              top_right)));
+
+        // Compute squared sum for gradient_vert and gradient_hor
+        __m128i squared_vert = _mm_mullo_epi32(gradient_vert, gradient_vert);
+        __m128i squared_hor = _mm_mullo_epi32(gradient_hor, gradient_hor);
+        __m128i squared_sum = _mm_add_epi32(squared_vert, squared_hor);
+        __m128 squared_sum_float = _mm_cvtepi32_ps(squared_sum);
+        __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
+
+        // Clamp to 255 and convert to 8-bit integer
+        __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
+        __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
+        __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
+
+        uint8_t temp[8] = {0};
+
+        if (gray_x >= width - 8) {
+            _mm_storeu_si16((__m128i*) temp, pack_8);
+            size_t remaining_pixels = width - gray_x;
+            for (size_t i = 0; i < remaining_pixels; i++) {
+                result[row_offset + gray_x + i] = temp[i];
+            }
         } else {
-            // Store the result
             _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
         }
     }
@@ -421,7 +707,6 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
     int* temporary_sum_2_start = temporary_sum_2;
     uint8_t* result_start = result;
 
-
     size_t row_indices[height];
     size_t current_pixel = 0;
     int sum = 0;
@@ -440,7 +725,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
                 sum = grayscale_image[current_pixel - 1];
                 sum2 = -grayscale_image[current_pixel - 1];
             }
-            sum += (grayscale_image[current_pixel] << 1);
+            sum += grayscale_image[current_pixel] * 2;
             if (gray_x + 1 < width) {
                 sum += grayscale_image[current_pixel + 1];
                 sum2 += grayscale_image[current_pixel + 1];
@@ -459,7 +744,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
         sum = 0;
         sum2 = 0;
 
-        sum2 += (temporary_sum_2[gray_x] << 1);
+        sum2 += temporary_sum_2[gray_x] * 2;
 
         sum += temporary_sum[gray_x + width];
         sum2 += temporary_sum_2[gray_x + width];
@@ -481,7 +766,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
             sum = -temporary_sum[current_pixel - width];
             sum2 = temporary_sum_2[current_pixel - width];
 
-            sum2 += (temporary_sum_2[current_pixel] << 1);
+            sum2 += temporary_sum_2[current_pixel] * 2;
 
             sum += temporary_sum[current_pixel + width];
             sum2 += temporary_sum_2[current_pixel + width];
@@ -504,7 +789,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
         sum = -temporary_sum[current_pixel - width];
         sum2 = temporary_sum_2[current_pixel - width];
 
-        sum2 += (temporary_sum_2[current_pixel] << 1);
+        sum2 += temporary_sum_2[current_pixel] * 2;
 
         int pixel_sum = sum * sum + sum2 * sum2;
         if (pixel_sum < 65025) {
@@ -514,6 +799,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
         }
     }
 
+    // reset the result pointer
     result = result_start;
 
     free(temporary_sum);

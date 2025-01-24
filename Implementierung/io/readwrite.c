@@ -1,6 +1,5 @@
 #include "readwrite.h"
 
-
 // Main function: Read PPM file sequentially.
 void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pixel_rgb_data, bool use_io_threading) {
     // Open and validate the file
@@ -15,7 +14,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     char* mapped_file = NULL;
     if ((mapped_file = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0))
         == MAP_FAILED) {
-        perror("Error mapping file.");
+        fprintf(stderr, "Error mapping file.\n");
         goto cleanup;
     }
 
@@ -25,7 +24,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     if ((header_size = parse_ppm_header(mapped_file, width, height, &max_val)) == -1) {
         goto cleanup;
     }
-    
+
     if (max_val < 0 || max_val > 255) {
         fprintf (stderr, "Failed! Provided file : %s is not a regular PPM image. Non valid max_val.\n", file_name);
         goto cleanup;
@@ -33,11 +32,12 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
 
    size_t rgb_values = *width * *height * 3;
    if (file_size !=  rgb_values + header_size) {
-        fprintf(stderr, "Failed! Provided file %s is not a regular PPM image. Number of pixels is ambiguous.\n", file_name);
+        fprintf(stderr, "Failed! Provided file %s is not a regular PPM image. "
+                        "Number of pixels is ambiguous.\n", file_name);
     }
 
     if (!(*pixel_rgb_data = malloc(rgb_values))) {
-        fprintf(stderr, "Error reading file: Could not allocate enough memory\n");
+        fprintf(stderr, "Error reading file: Could not allocate enough memory.\n");
         goto cleanup;
     }
 
@@ -80,7 +80,7 @@ int open_and_validate_file(const char* file_name, size_t* file_size) {
     int file_descriptor = open(file_name, O_RDONLY);
 
     if (file_descriptor == -1) {
-        perror("Error opening file.");
+        fprintf(stderr, "Error opening file.\n");
         exit(1);
     }
 
@@ -150,7 +150,7 @@ void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, 
     // Open the file
     int file_descriptor = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (file_descriptor < 0) {
-        perror("Error opening file.");
+        fprintf(stderr, "Error opening file. Check if file exists.\n");
         return;
     }
 
@@ -158,7 +158,7 @@ void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, 
     char header[128];
     int header_size = snprintf(header, sizeof(header), "P5\n%d %d\n255\n", width, height);
     if (write(file_descriptor, header, header_size) < 0) {
-        perror("Error writing header.");
+        fprintf(stderr, "Error writing header.\n");
         goto cleanup;
     }
 

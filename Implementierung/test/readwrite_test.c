@@ -4,16 +4,16 @@ void test_parse_ppm_header_correct_header(void) {
     char file_data[] =  "P6\n3 3\n255\n";
     int width, height, max_val;
     parse_ppm_header(file_data, &width, &height, &max_val);
-    assert_int_equal(3, width);
-    assert_int_equal(3, height);
-    assert_int_equal(255, max_val);
+
+    ASSERT_TRUE("Parser PPM Header Parsing Test", int_equal(3, width) && int_equal(3, height) && int_equal(255, max_val));
 }
 
 void test_parse_ppm_header_incorrect_header(void) {
     char* file_data =  "P3\n3 3\n255\n";
     int width, height, max_val;
     size_t header_size = parse_ppm_header(file_data, &width, &height, &max_val);
-    assert_int_equal(-1, header_size);
+
+    ASSERT_TRUE("Parser PPM Incorrect Header Test", int_equal(-1, header_size));
 }
 
 void test_read_ppm_correct_file(void) {
@@ -25,10 +25,8 @@ void test_read_ppm_correct_file(void) {
                                   110, 5, 15, 25, 40, 59, 70, 4, 2,
                                   11, 12, 76, 80, 95, 48, 35, 74, 55,
     };
-    assert_uint8_array_equal(expected_pixels, pixel_rgb_data, 27);
-    /*for (int i=0; i < 27; i++){
-        printf("%d\n", pixel_rgb_data[i]);
-    }*/
+
+    ASSERT_TRUE("Parser PPM Pixel Parsing Basic Test", uint8_array_equal(expected_pixels, pixel_rgb_data, 27));
 }
 
 void test_read_ppm_correct_file_parallel(void) {
@@ -40,14 +38,12 @@ void test_read_ppm_correct_file_parallel(void) {
                                   110, 5, 15, 25, 40, 59, 70, 4, 2,
                                   11, 12, 76, 80, 95, 48, 35, 74, 55,
     };
-    assert_uint8_array_equal(expected_pixels, pixel_rgb_data, 27);
-    /*for (int i=0; i < 27; i++){
-        printf("%d\n", pixel_rgb_data[i]);
-    }*/
+
+    ASSERT_TRUE("Parser PPM Header Parsing Parallel Test", uint8_array_equal(expected_pixels, pixel_rgb_data, 27));
 }
 
 //width and height do not correspond to given pixels
-void test_read_ppm_incorrcet_file(void) {
+void test_read_ppm_incorrect_file(void) {
     char file_data[] =  "test/binary_incorrect_file.ppm";
     int width, height;
     uint8_t* pixel_rgb_data;
@@ -56,14 +52,13 @@ void test_read_ppm_incorrcet_file(void) {
                                   110, 5, 15, 25, 40, 59, 70, 4, 2,
                                   11, 12, 76, 80, 95, 48, 35, 74, 55,
     };
-    assert_uint8_array_equal(expected_pixels, pixel_rgb_data, 27);
-    /*for (int i=0; i < 27; i++){
-        printf("%d\n", pixel_rgb_data[i]);
-    }*/
+
+    ASSERT_TRUE("Parser PPM Header vs Data Mismatch Test", uint8_array_equal(expected_pixels, pixel_rgb_data, 27));
 }
 
-//max_val is is less than 0 or greater 255 
-void test_read_ppm_incorrcet_file_maxval(void) {
+//max_val is is less than 0 or greater 255
+// does this make sense? -> uint8
+void test_read_ppm_incorrect_file_maxval(void) {
     char file_data[] =  "test/binary_incorrect_file_maxval.ppm";
     int width, height;
     uint8_t* pixel_rgb_data;
@@ -72,10 +67,8 @@ void test_read_ppm_incorrcet_file_maxval(void) {
                                   110, 5, 15, 25, 40, 59, 70, 4, 2,
                                   11, 12, 76, 80, 95, 48, 35, 74, 55,
     };
-    assert_uint8_array_equal(expected_pixels, pixel_rgb_data, 27);
-    /*for (int i=0; i < 27; i++){
-        printf("%d\n", pixel_rgb_data[i]);
-    }*/
+
+    ASSERT_TRUE("Parser PPM Icorrect File maxval Test", uint8_array_equal(expected_pixels, pixel_rgb_data, 27));
 }
 
 
