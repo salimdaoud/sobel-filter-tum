@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "io/readwrite.h"
+#include "conversion/grayscale.h"
 #include "conversion/sobel.h"
 #include "io/arg_parser.h"
 #include "util/time_measurement.h"
