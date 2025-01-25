@@ -4,7 +4,7 @@ void print_help() {
     printf("Usage: program [options] <inputfile>\n");
     printf("Options:\n");
     printf("  -V <Zahl>            Specify the implementation version (default: 0)\n");
-    printf("  -B [Zahl]            Measure runtime with optional repetitions\n");
+    printf("  -B <Zahl>            Measure runtime with optional repetitions\n");
     printf("  -o <Dateiname>       Specify output file\n");
     printf("  --rgb_coeffs <a> <b> <c> Set coefficients a, b, and c for conversion\n");
     printf("  -h, --help           Show this help message and exit\n");
