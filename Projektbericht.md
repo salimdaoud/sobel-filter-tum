@@ -7,38 +7,50 @@
 <div style="text-align: center;"> Tobias Langer - Luca Tänzler - Salim Daoud </div>
 
 ---
-# 1 Aufgabenstellung
-In diesem Projekt haben wir uns damit beschäftigt, Farbiger Bilder in Graustufen zu konvertieren und dann den Sobel-Filter Algorithmus darauf durchzuführen. Dieser wird verwendet, um Kanten in Bildern zu erkennen. Als Eingabe für den Sobel-Filter wird ein 24bpp PPM (P6) erwartet. Jeder Pixel in einem Bild wird dabei durch drei Bytes repräsentiert, die die Farbwerte für Rot (R), Grün (G) und Blau (B) enthalten. Durch die Berechnung eines gewichteten Durchschnitts D, wandeln wir zunächst die Bilder in Graustufen im 8bpp PGM (P5) Format um. Das Graustufenbild soll anschließend noch einer Kantenerkennung mittels des SobelFilters unterzogen werden.
+## 1 Aufgabenstellung
+Im Rahmen des Praktikums soll ein Sobel-Filter für die Bildverarbeitung implementiert werden.
+Ziel der Aufgabe ist es, ein farbiges Bild zunächst in ein Graustufenbild umzuwandeln und anschließen mithilfe des Sobel-Filters Kanten hervorzuheben.
+Die Implementierung soll dabei in C erfolgen und die Performanz der verschiedenen Implementierungen mithilfe von Benchmarks verglichen werden.
+Außerdem muss ein Rahmenprogramm geschrieben werden, welches Optionen für das Programm entgegennimmt und sich auch um Fehlerbehandlung kümmert.
 
-# 2 Auflistung der Vergleichsimplementierungen
-## 2.1 Graustufen-Konvertierung
-### 2.1.1 Image to grayscale naive 
- Die Umwandlung eines Pixels in Graustufen geschieht durch das Berechnen eines gewichteten Durchschnitts D mittels der Koeffizienten a, b und c: 
+## 2 Überblick über die Implementierungen
+### 2.1 Graustufen-Konvertierung
+#### 2.1.1 Referenzimplementierung (naiv) 
+Ein Pixel (dargestellt durch einen Vektor aus den drei Farbkanälen Rot (R), Grün (G) und Blau (B))
+wird in Graustufen umgewandelt, indem der gewichtete Durchschnitt D mittels der Koeffizienten a, b und c berechnet wird:
 $$
 D = \frac{a \cdot R + b \cdot G + c \cdot B}{a + b + c}
 $$
-### 2.1.2 Image to grayscale using SIMD
-Die Methode nutzt SIMD (Single Instruction Multiple Data), um mehrere Pixel gleichzeitig zu verarbeiten und dadurch die Rechenleistung zu optimieren. Sie verarbeitet 4 Pixel gleichzeitig mithilfe von SIMD-Befehlen, um parallele Berechnungen durchzuführen. Für jeden Pixel wird der Grauwert basierend auf der Formel berechnet:
-$$
-D = \frac{a \cdot R + b \cdot G + c \cdot B}{a + b + c}
-$$
-Pixel, die nicht durch 4 teilbar sind, werden einzeln in einer zusätzlichen Schleife verarbeitet. 
-### 2.1.3 Image to Graysacle bitshift
-Wir haben versucht, Bitshifts zu verwenden, um die Effizienz der Berechnungen zu erhöhen. Dabei haben wir festgestellt, dass die Multiplikation der Pixelwerte mit den idealen Koeffizienten durch eine Approximierung mittels Bitshifts dargestellt werden kann.
 
-## 2.2 Sobel Filter
-Das Graustufenbild soll anschließend noch einer Kantenerkennung mittels des SobelFilters unterzogen werden. Der Sobel-Filter wird in mehreren Stufen angewendet. Zunächst filtert man das Graustufenbild getrennt, einmal nach vertikalen (v), und einmal nach horizontalen (h) Kanten $$
+#### 2.1.2 SIMD-Implementierung
+Die Methode nutzt SIMD-Befehle (Single Instruction Multiple Data) um 4 Pixel gleichzeitig zu verarbeiten und dadurch die Rechenzeit zu optimieren.
+Die zu grunde liegende Formel ist dieselbe wie bei der Referenzimplementierung.
+Pixel, die nicht durch 4 teilbar sind, werden einzeln in einer zusätzlichen Schleife verarbeitet.
+
+#### 2.1.3 Implementierung mit Bit-shift
+Wir haben versucht mithilfe von Bit-shifts die Effizienz der Berechnungen zu verbessern.
+Dabei haben wir festgestellt, dass die Multiplikation der Pixelwerte mit den idealen Koeffizienten durch eine Approximation mittels Bit-shifts dargestellt werden kann.
+
+### 2.2 Sobel-Filter
+#### 2.2.1 Referenzimplementierung (naiv)
+Der Sobel-Filter wird in mehreren Stufen angewandt.
+Zunächst wird das Graustufenbild Q getrennt nach vertikalen (v) und nach horizontalen (h) Kanten gefiltert: 
+$$
 Q^v = M^v \ast Q \quad Q^h = M^h \ast Q
 $$
-mit den Faltungsmatrizen Mv , Mh der Dimension 3:
-$$ M^v = \begin{bmatrix} 1 & 0 & -1 \\ 2 & 0 & -2 \\ 1 & 0 & -1 \end{bmatrix} \quad M^h = \begin{bmatrix} 1 & 2 & 1 \\ 0 & 0 & 0 \\ -1 & -2 & -1 \end{bmatrix} $$
+mit den Faltungsmatrizen $M^v$, $M^h$ der Dimension 3:
+$$ 
+M^v = \begin{pmatrix} 1 & 0 & -1 \\ 2 & 0 & -2 \\ 1 & 0 & -1 \end{pmatrix} \quad M^h = \begin{pmatrix} 1 & 2 & 1 \\ 0 & 0 & 0 \\ -1 & -2 & -1 \end{pmatrix} 
+$$
 Somit lässt sich die Berechnung des neuen Graustufenpixels mittels der Faltung folgendermaßen darstellen (i und j bezeichnen wie gewohnt die (Null-basierte) Reihe und Spalte einer Matrix):
-$$ Q^d(x, y) = \sum_{i=-1}^{1} \sum_{j=-1}^{1} M^d(1+i, 1+j) \cdot Q(x+i, y+j), \quad d \in \{v, h\} $$
-Sind $Q^v$ und  $Q^h$ berechnet worden, kombiniert man beide Bilder pixelweise zum Gesamtbild $Q'$ :
-$$ Q'(x, y) = \text{clamp}_{0}^{255} \left( \sqrt{ \left( Q^v(x, y) \right)^2 + \left( Q^h(x, y) \right)^2 } \right) $$
+$$
+Q^d_{(x, y)} = \sum_{i=-1}^{1} \sum_{j=-1}^{1} M^d_{(1+i, 1+j)} \cdot Q_{(x+i, y+j)} \quad d \in \{v, h\}
+$$
+Sind $Q^v$ und  $Q^h$ berechnet worden, kombiniert man beide Bilder pixelweise zum Gesamtbild $Q'$:
+$$ 
+Q'_{(x, y)} = \text{clamp}_{0}^{255} \left(\sqrt{\left(Q^v_{(x, y)} \right)^2 + \left(Q^h_{(x, y)} \right)^2} \right) 
+$$
 
-### 2.2.1 sobel_naive_V0
-Diese ist eine Vergleichsimplementierung. Das ist nur eine naive Implementierung des Sobel-Filter Algorithmus und orientiert sich sehr stark an der mathematischen Definition.
 ### 2.2.2 sobel_squareroot_lookup_V1
 Dies ist erneut die naive Implementierung des Sobel-Filter-Algorithmus, allerdings wird hier eine Lookup-Tabelle verwendet, um Quadratwurzeln zu berechnen, anstatt die Wurzelfunktion aus der C-Bibliothek zu nutzen. Alle Quadratwurzeln für Werte zwischen 0 und 255 wurden vorab berechnet und in einer Lookup-Tabelle gespeichert.
 ### 2.2.3 sobel_kernel_unroll_V2
