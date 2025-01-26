@@ -1,5 +1,4 @@
-#include <unistd.h>
-#include <zconf.h>
+#define _POSIX_C_SOURCE 200809L
 #include "readwrite.h"
 
 // Main function: Read PPM file sequentially.
