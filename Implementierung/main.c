@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
 
         printf("============================================================================================"
                "======================\n"
-               "Test Run %s: %d of %d passed. %d failed.\n",
+               "\nTest Run %s: %d of %d passed. %d failed.\n",
                test_result ? "FAILED" : "SUCCESSFUL",
                global_total_tests - global_failed_tests,
                global_total_tests, global_failed_tests);

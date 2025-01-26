@@ -106,7 +106,8 @@ void sobel_kernel_unroll_V2( const uint8_t* img, size_t width, size_t height,
     }
 }
 
-void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
+/*
+void sobel_SIMD_obsolete(const uint8_t* img, size_t width, size_t height,
                 float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*)tmp;
@@ -308,54 +309,108 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
         }
     }
 }
+**/
 
-void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
+void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
                    float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*) tmp;
     img_to_grayscale_simd_8_pixels(img, width, height, a, b, c, grayscale_image);
 
-    size_t row_offset = 0;
-
     uint8_t* image_row_prev = grayscale_image - width;
     uint8_t* image_row_now = grayscale_image;
     uint8_t* image_row_next = grayscale_image + width;
 
+    size_t row_offset = 0;
+    size_t remaining_pixels_row = width % 8 == 0 ? 8 : (width % 8);
+    size_t border_pixels_row = width - remaining_pixels_row;
+    __m128i zero_mask_left_pixels = _mm_setzero_si128();
+    __m128i zero_mask_mid_pixels = _mm_setzero_si128();
+    __m128i zero_mask_right_pixels = _mm_setzero_si128();
     __m128i zero_mask_drop_first_1_word = _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF0000);
-    __m128i zero_mask_drop_last_1_word = _mm_set_epi32(0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
-    __m128i zero_mask_drop_last_2_word = _mm_set_epi32(0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
-    __m128i zero_mask_drop_last_3_word = _mm_set_epi32(0x00000000, 0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF);
-    __m128i zero_mask_drop_last_4_word = _mm_set_epi32(0x00000000, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF);
-    __m128i zero_mask_drop_last_5_word = _mm_set_epi32(0x00000000, 0x00000000, 0x0000FFFF, 0xFFFFFFFF);
-    __m128i zero_mask_drop_last_6_word = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF);
-    __m128i zero_mask_drop_last_7_word = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0x0000FFFF);
 
-    for (size_t gray_y = 0; gray_y < (height - 1); gray_y++) {
+    switch (width % 8) {
+        case 0:
+            zero_mask_left_pixels = _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_mid_pixels = _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_right_pixels = _mm_set_epi32(0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            break;
+        case 7:
+            zero_mask_left_pixels = _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_mid_pixels = _mm_set_epi32(0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_right_pixels = _mm_set_epi32(0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            break;
+        case 6:
+            zero_mask_left_pixels = _mm_set_epi32(0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_mid_pixels = _mm_set_epi32(0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_right_pixels = _mm_set_epi32(0x00000000, 0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            break;
+        case 5:
+            zero_mask_left_pixels = _mm_set_epi32(0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_mid_pixels = _mm_set_epi32(0x00000000, 0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_right_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF);
+            break;
+        case 4:
+            zero_mask_left_pixels = _mm_set_epi32(0x00000000, 0x0000FFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_mid_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_right_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0x0000FFFF, 0xFFFFFFFF);
+            break;
+        case 3:
+            zero_mask_left_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF);
+            zero_mask_mid_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0x0000FFFF, 0xFFFFFFFF);
+            zero_mask_right_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF);
+            break;
+        case 2:
+            zero_mask_left_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0x0000FFFF, 0xFFFFFFFF);
+            zero_mask_mid_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF);
+            zero_mask_right_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0x0000FFFF);
+            break;
+        case 1:
+            zero_mask_left_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF);
+            zero_mask_mid_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0x0000FFFF);
+            zero_mask_right_pixels = _mm_set_epi32(0x00000000, 0x00000000, 0x00000000, 0x00000000);
+            break;
+    }
+
+    for (size_t gray_y = 0; gray_y < height; gray_y++) {
         row_offset = gray_y * width;
         for (size_t gray_x = 0; gray_x < width; gray_x += 8) {
 
-            __m128i top_left = _mm_setzero_si128();
-            __m128i top = _mm_setzero_si128();
-            __m128i top_right = _mm_setzero_si128();
+            __m128i top_left;
+            __m128i top;
+            __m128i top_right;
+            __m128i bot_left;
+            __m128i bot;
+            __m128i bot_right;
 
-            if (gray_y > 0) {
+            if (__builtin_expect(gray_y > 0, 1)) {
                 top_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x - 1)),
                                              _mm_setzero_si128());
                 top = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x)),
                                         _mm_setzero_si128());
                 top_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x + 1)),
                                               _mm_setzero_si128());
+            } else {
+                top_left = _mm_setzero_si128();
+                top = _mm_setzero_si128();
+                top_right = _mm_setzero_si128();
             }
             __m128i left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x - 1)),
                                             _mm_setzero_si128());
             __m128i right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x + 1)),
                                      _mm_setzero_si128());
-            __m128i bot_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x - 1)),
+            if (__builtin_expect(gray_y != height - 1, 1)) {
+                bot_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x - 1)),
+                                             _mm_setzero_si128());
+                bot = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x)),
                                         _mm_setzero_si128());
-            __m128i bot = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x)),
-                                         _mm_setzero_si128());
-            __m128i bot_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x + 1)),
-                                         _mm_setzero_si128());
+                bot_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x + 1)),
+                                                      _mm_setzero_si128());
+            } else {
+                bot_left = _mm_setzero_si128();
+                bot = _mm_setzero_si128();
+                bot_right = _mm_setzero_si128();
+            }
 
             if (gray_x == 0) {
                 top_left = _mm_and_si128(top_left, zero_mask_drop_first_1_word);
@@ -363,84 +418,15 @@ void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
                 bot_left = _mm_and_si128(bot_left, zero_mask_drop_first_1_word);
             }
 
-            if (__builtin_expect((gray_x >= width - 8), 0)) {
-                if (gray_x == width - 8) {
-                    top = _mm_and_si128(top, zero_mask_drop_last_1_word);
-                    bot = _mm_and_si128(bot, zero_mask_drop_last_1_word);
-                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_2_word);
-                    right = _mm_and_si128(right, zero_mask_drop_last_2_word);
-                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_2_word);
-                }
-                if (gray_x == width - 7) {
-                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_1_word);
-                    left = _mm_and_si128(left, zero_mask_drop_last_1_word);
-                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_1_word);
-                    top = _mm_and_si128(top, zero_mask_drop_last_2_word);
-                    bot = _mm_and_si128(bot, zero_mask_drop_last_2_word);
-                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_3_word);
-                    right = _mm_and_si128(right, zero_mask_drop_last_3_word);
-                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_3_word);
-                }
-                if (gray_x == width - 6) {
-                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_2_word);
-                    left = _mm_and_si128(left, zero_mask_drop_last_2_word);
-                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_2_word);
-                    top = _mm_and_si128(top, zero_mask_drop_last_3_word);
-                    bot = _mm_and_si128(bot, zero_mask_drop_last_3_word);
-                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_4_word);
-                    right = _mm_and_si128(right, zero_mask_drop_last_4_word);
-                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_4_word);
-                }
-                if (gray_x == width - 5) {
-                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_3_word);
-                    left = _mm_and_si128(left, zero_mask_drop_last_3_word);
-                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_3_word);
-                    top = _mm_and_si128(top, zero_mask_drop_last_4_word);
-                    bot = _mm_and_si128(bot, zero_mask_drop_last_4_word);
-                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_5_word);
-                    right = _mm_and_si128(right, zero_mask_drop_last_5_word);
-                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_5_word);
-                }
-                if (gray_x == width - 4) {
-                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_4_word);
-                    left = _mm_and_si128(left, zero_mask_drop_last_4_word);
-                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_4_word);
-                    top = _mm_and_si128(top, zero_mask_drop_last_5_word);
-                    bot = _mm_and_si128(bot, zero_mask_drop_last_5_word);
-                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_6_word);
-                    right = _mm_and_si128(right, zero_mask_drop_last_6_word);
-                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_6_word);
-                }
-                if (gray_x == width - 3) {
-                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_5_word);
-                    left = _mm_and_si128(left, zero_mask_drop_last_5_word);
-                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_5_word);
-                    top = _mm_and_si128(top, zero_mask_drop_last_6_word);
-                    bot = _mm_and_si128(bot, zero_mask_drop_last_6_word);
-                    top_right = _mm_and_si128(top_right, zero_mask_drop_last_7_word);
-                    right = _mm_and_si128(right, zero_mask_drop_last_7_word);
-                    bot_right = _mm_and_si128(bot_right, zero_mask_drop_last_7_word);
-                }
-                if (gray_x == width - 2) {
-                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_6_word);
-                    left = _mm_and_si128(left, zero_mask_drop_last_6_word);
-                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_6_word);
-                    top = _mm_and_si128(top, zero_mask_drop_last_7_word);
-                    bot = _mm_and_si128(bot, zero_mask_drop_last_7_word);
-                    top_right = _mm_setzero_si128();
-                    right = _mm_setzero_si128();
-                    bot_right = _mm_setzero_si128();
-                }
-                if (gray_x == width - 1) {
-                    top_left = _mm_and_si128(top_left, zero_mask_drop_last_7_word);
-                    left = _mm_and_si128(left, zero_mask_drop_last_7_word);
-                    bot_left = _mm_and_si128(bot_left, zero_mask_drop_last_7_word);
-                    top = _mm_setzero_si128();
-                    bot = _mm_setzero_si128();
-                    top_right = _mm_setzero_si128();
-                    right = _mm_setzero_si128();
-                    bot_right = _mm_setzero_si128();
-                }
+            if (__builtin_expect((gray_x >= border_pixels_row), 0)) {
+                top_left = _mm_and_si128(top_left, zero_mask_left_pixels);
+                left = _mm_and_si128(left, zero_mask_left_pixels);
+                bot_left = _mm_and_si128(bot_left, zero_mask_left_pixels);
+                top = _mm_and_si128(top, zero_mask_mid_pixels);
+                bot = _mm_and_si128(bot, zero_mask_mid_pixels);
+                top_right = _mm_and_si128(top_right, zero_mask_right_pixels);
+                right = _mm_and_si128(right, zero_mask_right_pixels);
+                bot_right = _mm_and_si128(bot_right, zero_mask_right_pixels);
             }
 
             // Calculate gradient_vert and gradient_hor
@@ -480,142 +466,38 @@ void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
             __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
 
             // Clamp to 255 and convert to 8-bit integer
+            gradient_float = _mm_round_ps(gradient_float, _MM_FROUND_TO_ZERO);
+            gradient_float = _mm_min_ps(gradient_float, _mm_set1_ps(255.0f));
             __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
             __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
-            __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
+            __m128i pack_8_low = _mm_packus_epi16(pack_16, pack_16);
 
-            _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
             squared_sum_float = _mm_cvtepi32_ps(squared_sum_high);
             gradient_float = _mm_sqrt_ps(squared_sum_float);
 
             // Clamp to 255 and convert to 8-bit integer
+            gradient_float = _mm_round_ps(gradient_float, _MM_FROUND_TO_ZERO);
+            gradient_float = _mm_min_ps(gradient_float, _mm_set1_ps(255.0f));
             gradient_i = _mm_cvtps_epi32(gradient_float);
             pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
-            pack_8 = _mm_packus_epi16(pack_16, pack_16);
-            _mm_storel_epi64((__m128i*) (result + row_offset + gray_x + 4), pack_8);
+            __m128i pack_8_high = _mm_packus_epi16(pack_16, pack_16);
+
+            __m128i pack_8 = _mm_alignr_epi8(pack_8_high, pack_8_low, 12);
+
+            if (gray_y == height - 1 && gray_x >= border_pixels_row) {
+                uint8_t temp[8] = {0};
+                _mm_storel_epi64((__m128i*) temp, pack_8);
+                for (size_t i = 0; i < remaining_pixels_row; i++) {
+                    result[row_offset + gray_x + i] = temp[i];
+                }
+            } else {
+                _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
+            }
 
         }
         image_row_prev += width;
         image_row_now += width;
         image_row_next += width;
-    }
-
-    // loop unroll for last row
-    for (size_t gray_x = 0; gray_x < width; gray_x += 4) {
-
-        row_offset = (height - 1) * width;
-        __m128i top_left = _mm_setzero_si128();
-        __m128i top = _mm_setzero_si128();
-        __m128i top_right = _mm_setzero_si128();
-
-        if (height > 1) {
-            top_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x - 1)),
-                                         _mm_setzero_si128());
-            top = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x)),
-                                    _mm_setzero_si128());
-            top_right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x + 1)),
-                                          _mm_setzero_si128());
-        }
-        __m128i left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x - 1)),
-                                 _mm_setzero_si128());
-        __m128i right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x + 1)),
-                                  _mm_setzero_si128());
-
-        if (gray_x == 0) {
-            top_left = _mm_and_si128(top_left, zero_mask_drop_first_1_word);
-            left = _mm_and_si128(left, zero_mask_drop_first_1_word);
-        }
-
-        if (__builtin_expect((gray_x >= width - 8), 0)) {
-            if (gray_x == width - 8) {
-                top = _mm_and_si128(top, zero_mask_drop_last_1_word);
-                top_right = _mm_and_si128(top_right, zero_mask_drop_last_2_word);
-                right = _mm_and_si128(right, zero_mask_drop_last_2_word);
-            }
-            if (gray_x == width - 7) {
-                top_left = _mm_and_si128(top_left, zero_mask_drop_last_1_word);
-                left = _mm_and_si128(left, zero_mask_drop_last_1_word);
-                top = _mm_and_si128(top, zero_mask_drop_last_2_word);
-                top_right = _mm_and_si128(top_right, zero_mask_drop_last_3_word);
-                right = _mm_and_si128(right, zero_mask_drop_last_3_word);
-            }
-            if (gray_x == width - 6) {
-                top_left = _mm_and_si128(top_left, zero_mask_drop_last_2_word);
-                left = _mm_and_si128(left, zero_mask_drop_last_2_word);
-                top = _mm_and_si128(top, zero_mask_drop_last_3_word);
-                top_right = _mm_and_si128(top_right, zero_mask_drop_last_4_word);
-                right = _mm_and_si128(right, zero_mask_drop_last_4_word);
-            }
-            if (gray_x == width - 5) {
-                top_left = _mm_and_si128(top_left, zero_mask_drop_last_3_word);
-                left = _mm_and_si128(left, zero_mask_drop_last_3_word);
-                top = _mm_and_si128(top, zero_mask_drop_last_4_word);
-                top_right = _mm_and_si128(top_right, zero_mask_drop_last_5_word);
-                right = _mm_and_si128(right, zero_mask_drop_last_5_word);
-            }
-            if (gray_x == width - 4) {
-                top_left = _mm_and_si128(top_left, zero_mask_drop_last_4_word);
-                left = _mm_and_si128(left, zero_mask_drop_last_4_word);
-                top = _mm_and_si128(top, zero_mask_drop_last_5_word);
-                top_right = _mm_and_si128(top_right, zero_mask_drop_last_6_word);
-                right = _mm_and_si128(right, zero_mask_drop_last_6_word);
-            }
-            if (gray_x == width - 3) {
-                top_left = _mm_and_si128(top_left, zero_mask_drop_last_5_word);
-                left = _mm_and_si128(left, zero_mask_drop_last_5_word);
-                top = _mm_and_si128(top, zero_mask_drop_last_6_word);
-                top_right = _mm_and_si128(top_right, zero_mask_drop_last_7_word);
-                right = _mm_and_si128(right, zero_mask_drop_last_7_word);
-            }
-            if (gray_x == width - 2) {
-                top_left = _mm_and_si128(top_left, zero_mask_drop_last_6_word);
-                left = _mm_and_si128(left, zero_mask_drop_last_6_word);
-                top = _mm_and_si128(top, zero_mask_drop_last_7_word);
-                top_right = _mm_setzero_si128();
-                right = _mm_setzero_si128();
-            }
-            if (gray_x == width - 1) {
-                top_left = _mm_and_si128(top_left, zero_mask_drop_last_7_word);
-                left = _mm_and_si128(left, zero_mask_drop_last_7_word);
-                top = _mm_setzero_si128();
-                top_right = _mm_setzero_si128();
-                right = _mm_setzero_si128();
-            }
-        }
-
-        // Calculate gradient_vert and gradient_hor
-        __m128i gradient_vert = _mm_sub_epi32(_mm_add_epi32(top_left,
-                                                            _mm_add_epi32(left, left)),
-                                              _mm_add_epi32(top_right,
-                                                            _mm_add_epi32(right, right)));
-
-        __m128i gradient_hor = _mm_add_epi32(top_left,
-                                             _mm_add_epi32(top, _mm_add_epi32(top,
-                                                                              top_right)));
-
-        // Compute squared sum for gradient_vert and gradient_hor
-        __m128i squared_vert = _mm_mullo_epi32(gradient_vert, gradient_vert);
-        __m128i squared_hor = _mm_mullo_epi32(gradient_hor, gradient_hor);
-        __m128i squared_sum = _mm_add_epi32(squared_vert, squared_hor);
-        __m128 squared_sum_float = _mm_cvtepi32_ps(squared_sum);
-        __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
-
-        // Clamp to 255 and convert to 8-bit integer
-        __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
-        __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
-        __m128i pack_8 = _mm_packus_epi16(pack_16, pack_16);
-
-        uint8_t temp[8] = {0};
-
-        if (gray_x >= width - 8) {
-            _mm_storeu_si16((__m128i*) temp, pack_8);
-            size_t remaining_pixels = width - gray_x;
-            for (size_t i = 0; i < remaining_pixels; i++) {
-                result[row_offset + gray_x + i] = temp[i];
-            }
-        } else {
-            _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
-        }
     }
 }
 

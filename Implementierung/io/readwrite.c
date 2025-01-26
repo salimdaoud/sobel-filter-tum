@@ -1,9 +1,12 @@
+#include <unistd.h>
+#include <zconf.h>
 #include "readwrite.h"
 
 // Main function: Read PPM file sequentially.
 void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pixel_rgb_data, bool use_io_threading) {
     // Open and validate the file
     size_t file_size;
+    char* mapped_file = NULL;
 
     int file_descriptor;
     if ((file_descriptor = open_and_validate_file(file_name, &file_size)) == -1) {
@@ -11,7 +14,6 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     }
 
     // Memory-map the file. Not necessary for sequential implementation, but we wanted to make it uniform.
-    char* mapped_file = NULL;
     if ((mapped_file = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0))
         == MAP_FAILED) {
         fprintf(stderr, "Error mapping file.\n");
