@@ -112,7 +112,7 @@ int parse_arguments (int argc, char *argv[], struct ParsedArgs *args) {
     } else {
         fprintf(stderr, "Error: Input file is required.\n");
         print_help();
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     // Display parsed values.

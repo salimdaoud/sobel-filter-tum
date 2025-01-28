@@ -1,7 +1,8 @@
 #include "test_runner.h"
 
 void run_all_tests() {
-    printf("\n");
+    printf("\n============================================================================================"
+           "======================\n");
 
     // Grayscale functions.
     test_img_to_grayscale_naive();
@@ -30,9 +31,7 @@ void run_all_tests() {
 
     int test_result = (global_failed_tests != 0);
 
-    printf("============================================================================================"
-           "======================\n"
-           "\nTest Run %s: %d of %d passed. %d failed.\n",
+    printf("\n\nTest Run %s: %d of %d passed. %d failed.\n",
            test_result ? "FAILED" : "SUCCESSFUL",
            global_total_tests - global_failed_tests,
            global_total_tests, global_failed_tests);

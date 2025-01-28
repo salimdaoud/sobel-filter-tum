@@ -82,7 +82,7 @@ int open_and_validate_file(const char* file_name, size_t* file_size) {
 
     if (file_descriptor == -1) {
         fprintf(stderr, "Error opening given input file: '%s'.\n", file_name);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     struct stat statbuf;
@@ -205,7 +205,7 @@ void* write_thread_section(void* arg) {
     if (pwrite(thread_data->file_descriptor, thread_data->data + thread_data->start,
                thread_data->size, thread_data->start + thread_data->header_offset) < 0) {
         fprintf(stderr, "Error writing pixel data into output file.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     return NULL;

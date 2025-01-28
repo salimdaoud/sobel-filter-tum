@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
         tmp = NULL;
         free(result);
         result = NULL;
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     switch (args.version_number) {
@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
         args.output_file = malloc(strlen(args.input_file) + 1 );
         if (args.output_file == NULL) {
             fprintf(stderr, "Memory allocation failed.\n");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         strcpy(args.output_file, args.input_file);
         char *dot = strrchr(args.output_file, '.');

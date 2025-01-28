@@ -27,7 +27,8 @@ void print_matrix_test_details(uint8_t* expected, uint8_t* actual, size_t size) 
     for (size_t i = 0; i < size; i++){
         printf("%-20s [%2zu] %9d %7d\n","", i, expected[i], actual[i]);
     }
-    printf("\n");
+    printf("\n============================================================================================"
+           "======================\n");
 }
 
 
