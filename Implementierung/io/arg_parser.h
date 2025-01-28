@@ -3,10 +3,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "../test/test_runner.h"
+
 struct ParsedArgs {
-    size_t version_flag;
-    _Bool benchmark_flag;
-    _Bool test_flag;
+    size_t version_number;
+    bool benchmark_flag;
     size_t repetitions;
     char *input_file;
     char *output_file;
@@ -15,5 +16,5 @@ struct ParsedArgs {
 
 void print_help();
 
-int arg_parser (int argc, char *argv[], struct ParsedArgs *args);
+int parse_arguments (int argc, char *argv[], struct ParsedArgs *args);
 
