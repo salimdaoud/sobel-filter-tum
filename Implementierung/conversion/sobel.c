@@ -317,16 +317,19 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
     uint8_t* grayscale_image = (uint8_t*) tmp;
     img_to_grayscale_simd_8_pixels(img, width, height, a, b, c, grayscale_image);
 
+    // Store 1 set of 8 values for each row of the Sobel Matrix.
     uint8_t* image_row_prev = grayscale_image - width;
     uint8_t* image_row_now = grayscale_image;
     uint8_t* image_row_next = grayscale_image + width;
 
     size_t row_offset = 0;
-    size_t remaining_pixels_row = width % 8 == 0 ? 8 : (width % 8);
+    // The remaining pixels of each row which cannot be handled without restrictions. Even if the width can be divided
+    // by 8, loading the 8 right values would load 1 incorrect value, which is why they also need to be masked.
+    uint8_t remaining_pixels_row = width % 8 == 0 ? 8 : (width % 8);
     size_t border_pixels_row = width - remaining_pixels_row;
-    __m128i zero_mask_left_pixels = _mm_setzero_si128();
-    __m128i zero_mask_mid_pixels = _mm_setzero_si128();
-    __m128i zero_mask_right_pixels = _mm_setzero_si128();
+    __m128i zero_mask_left_pixels;
+    __m128i zero_mask_mid_pixels;
+    __m128i zero_mask_right_pixels;
     __m128i zero_mask_drop_first_1_word = _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF0000);
 
     switch (width % 8) {
@@ -383,6 +386,7 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
             __m128i bot;
             __m128i bot_right;
 
+            // For the first row, the row above is memory not assigned to our application. Set the values to 0 instead.
             if (__builtin_expect(gray_y > 0, 1)) {
                 top_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x - 1)),
                                              _mm_setzero_si128());
@@ -399,6 +403,8 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
                                             _mm_setzero_si128());
             __m128i right = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_now + gray_x + 1)),
                                      _mm_setzero_si128());
+
+            // For the last row, the row below is memory not assigned to our application. Set the values to 0 instead.
             if (__builtin_expect(gray_y != height - 1, 1)) {
                 bot_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x - 1)),
                                              _mm_setzero_si128());
@@ -412,12 +418,15 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
                 bot_right = _mm_setzero_si128();
             }
 
+            // Set the first left value for the leftmost part of each row to 0 (by definition) to avoid reading
+            // incorrect memory.
             if (gray_x == 0) {
                 top_left = _mm_and_si128(top_left, zero_mask_drop_first_1_word);
                 left = _mm_and_si128(left, zero_mask_drop_first_1_word);
                 bot_left = _mm_and_si128(bot_left, zero_mask_drop_first_1_word);
             }
 
+            // Mask the values for the righmost section of each row.
             if (__builtin_expect((gray_x >= border_pixels_row), 0)) {
                 top_left = _mm_and_si128(top_left, zero_mask_left_pixels);
                 left = _mm_and_si128(left, zero_mask_left_pixels);
@@ -429,7 +438,8 @@ void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
                 bot_right = _mm_and_si128(bot_right, zero_mask_right_pixels);
             }
 
-            // Calculate gradient_vert and gradient_hor
+            // Calculate gradient_vert and gradient_hor in the scheme of Sobel Kernel unroll. Use the absolute values
+            // to avoid problems when loading signed values into unsigned values later.
             __m128i gradient_vert = _mm_abs_epi16(_mm_sub_epi16(_mm_add_epi16(top_left,
                                                   _mm_add_epi16(left, _mm_add_epi16(left,
                                                   bot_left))), // positive values
@@ -620,8 +630,7 @@ void sobel_separated_convolution_V4( const uint8_t* img, size_t width, size_t he
     temporary_sum = temporary_sum_start;
     temporary_sum_2 = temporary_sum_2_start;
 
-
-        //loop unroll for first row
+    //loop unroll for first row
     for (size_t gray_x = 0; gray_x < width; gray_x++) {
         sum = 0;
         sum2 = 0;

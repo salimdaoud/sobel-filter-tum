@@ -81,7 +81,7 @@ int open_and_validate_file(const char* file_name, size_t* file_size) {
     int file_descriptor = open(file_name, O_RDONLY);
 
     if (file_descriptor == -1) {
-        fprintf(stderr, "Error opening file.\n");
+        fprintf(stderr, "Error opening given input file: '%s'.\n", file_name);
         exit(1);
     }
 
@@ -190,6 +190,8 @@ void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, 
             goto cleanup;
         }
     }
+
+    printf("\nData successfully written to given output file: '%s'.\n", filename);
 
     cleanup:
     if (file_descriptor) {
