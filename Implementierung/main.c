@@ -12,12 +12,8 @@ int main(int argc, char* argv[]) {
     struct ParsedArgs args;
 
     // Parse command line arguments.
-    if (arg_parser(argc, argv, &args) == -1) {
+    if (parse_arguments(argc, argv, &args) == -1) {
         return EXIT_FAILURE;
-    }
-
-    if (args.test_flag) {
-        goto test_only;
     }
 
     int width, height;
@@ -26,8 +22,9 @@ int main(int argc, char* argv[]) {
     // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy.
     read_ppm_file(args.input_file, &width, &height, &rgbData, true);
 
-    // Allocate temporary buffer for grayscale and output buffer for the sobel filter result.
-    uint8_t* tmp = malloc(width * height);
+    // Allocate temporary buffer for grayscale and output buffer for the sobel filter result. +8 to avoid undefined
+    // behaviour when reading beyond limits with SIMD
+    uint8_t* tmp = malloc(width * height + 8);
     uint8_t* result = malloc(width * height);
 
     float r_value_weighted = args.rgb_coeffs[0];
@@ -45,7 +42,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    switch (args.version_flag) {
+    switch (args.version_number) {
         case 1:
             printf("Squareroot lookup Sobel implementation used.\n");
             if (args.benchmark_flag){
@@ -156,57 +153,6 @@ int main(int argc, char* argv[]) {
     free(rgbData);
     free(tmp);
     free(result);
-
-
-    test_only:
-    if (args.test_flag) {
-        #include "test/sobel_test.h"
-        #include "test/readwrite_test.h"
-        #include "test/grayscale_test.h"
-
-        printf("\n");
-
-        // Grayscale functions.
-        test_img_to_grayscale_naive();
-        test_img_to_grayscale_naive_little_weights();
-        test_img_to_grayscale_SIMD();
-        test_img_to_grayscale();
-        test_img_to_grayscale_bitshift();
-        test_img_to_grayscale_SIMD_8_pixels();
-
-        // Sobel functions.
-        test_sobel_naive_V0();
-        test_sobel_kernel_unroll_V2();
-        test_sobel_SIMD_V3();
-        test_sobel_squareroot_lookup_V1();
-        test_sobel_separated_convolution_V4();
-
-        // Read/Write
-        test_parse_ppm_header_correct_header();
-        test_parse_ppm_header_incorrect_header();
-        test_read_ppm_correct_file();
-        test_read_ppm_correct_file_parallel();
-        test_read_ppm_incorrect_file();
-        // TODO: fix read write tests and adapt them to fit into test scheme
-        // test_write_pgm_file();
-        // test_read_ppm_incorrect_file_maxval();
-
-        int test_result = (global_failed_tests != 0);
-
-        printf("============================================================================================"
-               "======================\n"
-               "\nTest Run %s: %d of %d passed. %d failed.\n",
-               test_result ? "FAILED" : "SUCCESSFUL",
-               global_total_tests - global_failed_tests,
-               global_total_tests, global_failed_tests);
-
-        // This doesn't have any effect but suppressing a compiler warning.
-        (void) function_name;
-        (void) file;
-    }
     
-    
-    return 0;
-
-
+    return EXIT_SUCCESS;
 }
