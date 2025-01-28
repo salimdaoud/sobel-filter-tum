@@ -109,12 +109,22 @@ void img_to_grayscale_simd_8_pixels(const uint8_t* img, size_t width, size_t hei
         extract_r_g_b_sorted(r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0, bgr_7_bgr_6_bg_5,
                              &r_76543210, &g_76543210, &b_76543210);
 
-        // Calculate 8 Y elements.
-        __m128i gray_16_76543210 = convert_rgb_to_gray_8_pixels(r_76543210, g_76543210, b_76543210,
-                                                                a, b, c);
+        __m128i gray_8_76543210;
 
-        // Pack uint16 elements to 16 uint8 elements (put result in single XMM register). Only lower 8 uint8 elements are relevant.
-        __m128i gray_8_76543210 = _mm_packus_epi16(gray_16_76543210, gray_16_76543210);
+        if (a > 0.999) {
+            gray_8_76543210 = _mm_packus_epi16(r_76543210, r_76543210);
+        } else if (b > 0.999) {
+            gray_8_76543210 = _mm_packus_epi16(g_76543210, g_76543210);
+        } else if (c > 0.999) {
+           gray_8_76543210 = _mm_packus_epi16(b_76543210, b_76543210);
+        } else {
+            // Calculate 8 Y elements.
+            __m128i gray_16_76543210 = convert_rgb_to_gray_8_pixels(r_76543210, g_76543210, b_76543210,
+                                                                    a, b, c);
+
+            // Pack uint16 elements to 16 uint8 elements (put result in single XMM register). Only lower 8 uint8 elements are relevant.
+            gray_8_76543210 = _mm_packus_epi16(gray_16_76543210, gray_16_76543210);
+        }
 
         // Store 8 elements of Y in row Y0, and 8 elements of Y in row Y1.
         _mm_storel_epi64((__m128i*)(gray + index_gray), gray_8_76543210);
