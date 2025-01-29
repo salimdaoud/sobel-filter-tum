@@ -184,7 +184,7 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
             __m128i bot_right;
 
             // For the first row, the row above is memory not assigned to our application. Set the values to 0 instead.
-            if (__builtin_expect(gray_y > 0, 1)) {
+            if (gray_y > 0) {
                 top_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x - 1)),
                                              _mm_setzero_si128());
                 top = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_prev + gray_x)),
@@ -202,7 +202,7 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
                                      _mm_setzero_si128());
 
             // For the last row, the row below is memory not assigned to our application. Set the values to 0 instead.
-            if (__builtin_expect(gray_y != height - 1, 1)) {
+            if (gray_y != height - 1) {
                 bot_left = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x - 1)),
                                              _mm_setzero_si128());
                 bot = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*) (image_row_next + gray_x)),
@@ -224,7 +224,7 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
             }
 
             // Mask the values for the righmost section of each row.
-            if (__builtin_expect((gray_x >= border_pixels_row), 0)) {
+            if (gray_x >= border_pixels_row) {
                 top_left = _mm_and_si128(top_left, zero_mask_left_pixels);
                 left = _mm_and_si128(left, zero_mask_left_pixels);
                 bot_left = _mm_and_si128(bot_left, zero_mask_left_pixels);
@@ -378,7 +378,7 @@ void sobel_squareroot_lookup_V1( const uint8_t* img, size_t width, size_t height
     }
 }
 
-// Separated Convolution
+// Separate Convolution
 void sobel_V2(const uint8_t* img, size_t width, size_t height,
               float a, float b, float c, void* tmp, uint8_t* result) {
 
