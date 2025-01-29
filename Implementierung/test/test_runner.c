@@ -7,7 +7,7 @@ void run_all_tests() {
     // Grayscale functions.
     test_img_to_grayscale_naive();
     test_img_to_grayscale_naive_little_weights();
-    test_img_to_grayscale_SIMD();
+    test_img_to_grayscale_simd();
     test_img_to_grayscale();
     test_img_to_grayscale_bitshift();
     test_img_to_grayscale_SIMD_8_pixels();

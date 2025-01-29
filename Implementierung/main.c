@@ -44,29 +44,29 @@ int main(int argc, char* argv[]) {
 
     switch (args.version_number) {
         case 1:
-            printf("Squareroot lookup Sobel implementation used.\n");
-            if (args.benchmark_flag){
-                start_time_measurement();
-            }
-            for (size_t i = 0; i < args.repetitions; i++) {
-                sobel_squareroot_lookup_V1(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                        b_value_weighted, tmp, result);
-            }
-            if (args.benchmark_flag){
-                end_time_measurement("Sobel Squareroot Lookup");
-            }
-            break;
-        case 2:
             printf("Kernel unroll Sobel implementation used.\n");
             if (args.benchmark_flag){
                 start_time_measurement();
             }
             for (size_t i = 0; i < args.repetitions; i++) {
-                sobel_kernel_unroll_V2(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                    b_value_weighted, tmp, result);
+                sobel_V1(rgbData, width, height, r_value_weighted, g_value_weighted,
+                         b_value_weighted, tmp, result);
             }
             if (args.benchmark_flag){
                 end_time_measurement("Sobel Kernel Unroll");
+            }
+            break;
+        case 2:
+            printf("Separated Convolution Sobel implementation used.\n");
+            if (args.benchmark_flag){
+                start_time_measurement();
+            }
+            for (size_t i = 0; i < args.repetitions; i++) {
+                sobel_V2(rgbData, width, height, r_value_weighted, g_value_weighted,
+                         b_value_weighted, tmp, result);
+            }
+            if (args.benchmark_flag){
+                end_time_measurement("Sobel Separated Convolution");
             }
             break;
         case 3:
@@ -76,8 +76,8 @@ int main(int argc, char* argv[]) {
                     start_time_measurement();
                 }
                 for (size_t i = 0; i < args.repetitions; i++) {
-                    sobel_SIMD_V3(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                b_value_weighted, tmp, result);
+                    sobel_V3(rgbData, width, height, r_value_weighted, g_value_weighted,
+                             b_value_weighted, tmp, result);
                 }
                 if (args.benchmark_flag){
                     end_time_measurement("Sobel SIMD implementation");
@@ -89,27 +89,26 @@ int main(int argc, char* argv[]) {
                     start_time_measurement();
                 }
                 for (size_t i = 0; i < args.repetitions; i++) {
-                    sobel_naive_V0(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                b_value_weighted, tmp, result);
+                    sobel(rgbData, width, height, r_value_weighted, g_value_weighted,
+                          b_value_weighted, tmp, result);
                 }
                 if (args.benchmark_flag){
                     end_time_measurement("Naive Sobel Implementation");
                 }
                 break;
                 }
-
             break;
         case 4:
-            printf("Separated Convolution Sobel implementation used.\n");
+            printf("Squareroot lookup Sobel implementation used.\n");
             if (args.benchmark_flag){
                 start_time_measurement();
             }
             for (size_t i = 0; i < args.repetitions; i++) {
-                sobel_separated_convolution_V4(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                            b_value_weighted, tmp, result);
+                sobel_squareroot_lookup_V1(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                           b_value_weighted, tmp, result);
             }
             if (args.benchmark_flag){
-                end_time_measurement("Sobel Separated Convolution");
+                end_time_measurement("Sobel Squareroot Lookup");
             }
             break;
         default:
@@ -118,8 +117,8 @@ int main(int argc, char* argv[]) {
                 start_time_measurement();
             }
             for (size_t i = 0; i < args.repetitions; i++) {
-                sobel_naive_V0(rgbData, width, height, r_value_weighted, g_value_weighted,
-                            b_value_weighted, tmp, result);
+                sobel(rgbData, width, height, r_value_weighted, g_value_weighted,
+                      b_value_weighted, tmp, result);
             }
             if (args.benchmark_flag){
                 end_time_measurement("Naive Sobel Implementation");

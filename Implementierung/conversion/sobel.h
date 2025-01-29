@@ -26,36 +26,28 @@ typedef struct {
     size_t end_row;
 } SobelArgs;
 
-void sobel_naive_V0( const uint8_t* img, size_t width, size_t height,
-            float a, float b, float c,
-            void* tmp,
-            uint8_t* result);
+void sobel(const uint8_t* img, size_t width, size_t height,
+           float a, float b, float c,
+           void* tmp,
+           uint8_t* result);
         
-void sobel_kernel_unroll_V2(const uint8_t* img, size_t width, size_t height,
-            float a, float b, float c,
-            void* tmp,
-            uint8_t* result);
+void sobel_V1(const uint8_t* img, size_t width, size_t height,
+              float a, float b, float c,
+              void* tmp,
+              uint8_t* result);
 
-void sobel_SIMD_V3(const uint8_t* img, size_t width, size_t height,
-            float a, float b, float c,
-            void* tmp,
-            uint8_t* result);
+void sobel_V2(const uint8_t* img, size_t width, size_t height,
+              float a, float b, float c,
+              void* tmp,
+              uint8_t* result);
 
-void sobel_SIMD_8_pixels_V3(const uint8_t* img, size_t width, size_t height,
-                            float a, float b, float c, void* tmp, uint8_t* result);
+void sobel_V3(const uint8_t* img, size_t width, size_t height,
+              float a, float b, float c,
+              void* tmp,
+              uint8_t* result);
 
 void sobel_squareroot_lookup_V1(const uint8_t* img, size_t width, size_t height,
                              float a, float b, float c,
                              void* tmp,
                              uint8_t* result);
-
-void sobel_separated_convolution_V4(const uint8_t* img, size_t width, size_t height,
-                                 float a, float b, float c,
-                                 void* tmp,
-                                 uint8_t* result);
-
-void* sobel_worker(void* args);
-
-void sobel_multithreaded(const uint8_t* img, size_t width, size_t height,
-                         float a, float b, float c, void* tmp, uint8_t* result);
 #endif

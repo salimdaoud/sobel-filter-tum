@@ -12,7 +12,7 @@ void test_sobel_naive_V0(void) {
     uint8_t gray[9] = {0};
     uint8_t actual[9] = {0};
 
-    sobel_naive_V0(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
+    sobel(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
     bool test_result = uint8_array_equal(expected, actual, 9);
     ASSERT_TRUE("Sobel Naive Basic Test", test_result);
@@ -33,7 +33,7 @@ void test_sobel_kernel_unroll_V2(void){
     uint8_t gray[9] = {0};
     uint8_t actual[9] = {0};
 
-    sobel_kernel_unroll_V2(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
+    sobel_V1(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
 
 
@@ -57,7 +57,7 @@ void test_sobel_SIMD_V3(void) {
 
     uint8_t* actual = malloc(12);
 
-    sobel_SIMD_V3(img, 4, 3, 0.299f, 0.587f, 0.114f, gray, actual);
+    sobel_V3(img, 4, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
     bool test_result = uint8_array_equal(expected, actual, 12);
     ASSERT_TRUE("Sobel V3 Basic Test", test_result);
@@ -100,7 +100,7 @@ void test_sobel_separated_convolution_V4(void) {
     uint8_t gray[9] = {0};
     uint8_t actual[9] = {0};
 
-    sobel_separated_convolution_V4 (img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
+    sobel_V2(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
     /*for (size_t i = 0; i < 9; i++){
         printf("%d\n", actual[i]);
