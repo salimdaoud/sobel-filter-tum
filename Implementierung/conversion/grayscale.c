@@ -102,11 +102,11 @@ void img_to_grayscale_simd_8_pixels(const uint8_t* img, size_t width, size_t hei
         __m128i b_76543210;
         // Load 8 elements of each color channel R,G,B from first row. Load 24 (8 * 3 values) unaligned, 16 + 8 char
         __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0 = _mm_loadu_si128((__m128i*)(img + index_rgb));
-        __m128i bgr_7_bgr_6_bg_5                  = _mm_loadu_si128((__m128i*)(img + index_rgb + 16));
+        __m128i bgr_7_bgr_6_bgr_5_bgr_4           = _mm_loadu_si128((__m128i*)(img + index_rgb + 12));
 
         // Separate RGB, and put together Red Values, Green Values and Blue Values (together in same XMM register).
         // Result is also unpacked from uint8 to uint16 elements.
-        extract_r_g_b_sorted(r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0, bgr_7_bgr_6_bg_5,
+        extract_r_g_b_sorted(r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0, bgr_7_bgr_6_bgr_5_bgr_4,
                              &r_76543210, &g_76543210, &b_76543210);
 
         __m128i gray_8_76543210;
@@ -140,7 +140,7 @@ void img_to_grayscale_simd_8_pixels(const uint8_t* img, size_t width, size_t hei
 }
 
 static __inline void extract_r_g_b_sorted(const __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0,
-                                          const __m128i bgr_7_bgr_6_bg_5,
+                                          const __m128i bgr7_bgr6_bgr5_bgr_4,
                                           __m128i* r_76543210,
                                           __m128i* g_76543210,
                                           __m128i* b_76543210){
@@ -151,9 +151,6 @@ static __inline void extract_r_g_b_sorted(const __m128i r_5_bgr_4_bgr_3_bgr_2_bg
                                               11,8,5,2,     // green
                                               10,7,4,1,     // blue
                                               9,6,3,0);     // red
-
-// Move missing RGB values from 16 element register to former 8 element register.
-    __m128i bgr7_bgr6_bgr5_bgr_4 = _mm_alignr_epi8(bgr_7_bgr_6_bg_5, r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0, 12);
 
 // Gather 4 Red Values, 4 Green Values and 4 Blue Values.
     __m128i r_3210_b_3210_g_3210_r_3210 = _mm_shuffle_epi8(r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0, shuffle_mask);
