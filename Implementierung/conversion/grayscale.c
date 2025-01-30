@@ -41,9 +41,9 @@ static __inline void extract_r_g_b_sorted(const __m128i r_5_bgr_4_bgr_3_bgr_2_bg
 static __inline __m128i convert_rgb_to_gray_8_pixels(__m128i r_76543210,
                                                      __m128i g_76543210,
                                                      __m128i b_76543210,
-                                                     float r_value_weighted,
-                                                     float g_value_weighted,
-                                                     float b_value_weighted);
+                                                     const __m128i r_coef_extended,
+                                                     const __m128i g_coef_extended,
+                                                     const __m128i b_coef_extended);
 
 void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
                            float a, float b, float c, uint8_t* gray){
@@ -52,13 +52,24 @@ void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
     size_t index_rgb = 0;
     size_t index_gray = 0;
 
+    int16_t r_value_weight_fixed = (int16_t)(a * 32768.0 + 0.5);
+    int16_t g_value_weight_fixed = (int16_t)(b * 32768.0 + 0.5);
+    int16_t b_value_weight_fixed = (int16_t)(c * 32768.0 + 0.5);
+
+    // Each coefficient is expanded by 2^15 (not 2^16 as we use signed integers to be able to use _mm_mulhrs_epi16),
+    // and rounded to int16 (add 0.5 for rounding). Cannot use shift because of float.
+    const __m128i r_coef_extended = _mm_set1_epi16(r_value_weight_fixed);
+    const __m128i g_coef_extended = _mm_set1_epi16(g_value_weight_fixed);
+    const __m128i b_coef_extended = _mm_set1_epi16(b_value_weight_fixed);
+
     //Process one row per iteration.
     for (; index_rgb < simd_size; index_rgb += 24, index_gray += 8) {
 
         __m128i r_76543210;
         __m128i g_76543210;
         __m128i b_76543210;
-        // Load 8 elements of each color channel R,G,B from first row. Load 24 (8 * 3 values) unaligned, 16 + 8 char
+
+        // Load 8 elements of each color channel R,G,B from first row. Load 24 (8 * 3 values) unaligned
         __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0 = _mm_loadu_si128((__m128i*)(img + index_rgb));
         __m128i bgr_7_bgr_6_bgr_5_bgr_4           = _mm_loadu_si128((__m128i*)(img + index_rgb + 12));
 
@@ -78,9 +89,12 @@ void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
         } else {
             // Calculate 8 Y elements.
             __m128i gray_16_76543210 = convert_rgb_to_gray_8_pixels(r_76543210, g_76543210, b_76543210,
-                                                                    a, b, c);
+                                                                    r_coef_extended,
+                                                                    g_coef_extended,
+                                                                    b_coef_extended);
 
-            // Pack uint16 elements to 16 uint8 elements (put result in single XMM register). Only lower 8 uint8 elements are relevant.
+            // Pack uint16 elements to 16 uint8 elements (put result in single XMM register).
+            // Only lower 8 uint8 elements are relevant.
             gray_8_76543210 = _mm_packus_epi16(gray_16_76543210, gray_16_76543210);
         }
 
@@ -108,7 +122,7 @@ static __inline void extract_r_g_b_sorted(const __m128i rgb_0_rgb_1_rgb_2_rgb_3_
     const __m128i shuffle_mask = _mm_set_epi8(9,6,3,0,      // red
                                               10,7,4,1,     // green
                                               11,8,5,2,    // blue
-                                              9,6,3,0);     // red
+                                              9,6,3,0);    // red
 
 // Gather 4 Red Values, 4 Green Values and 4 Blue Values.
     __m128i r_3210_g_3210_b_3210_r_3210 = _mm_shuffle_epi8(rgb_0_rgb_1_rgb_2_rgb_3_rgb_4_r5, shuffle_mask);
@@ -135,13 +149,10 @@ static __inline void extract_r_g_b_sorted(const __m128i rgb_0_rgb_1_rgb_2_rgb_3_
 
 // Calculate 8 Grayscale elements from 8 RGB Values.
 static __inline __m128i convert_rgb_to_gray_8_pixels(__m128i r_76543210, __m128i g_76543210, __m128i b_76543210,
-                                                     float r_value_weighted, float g_value_weighted, float b_value_weighted) {
+                                                     const __m128i r_coef_extended,
+                                                     const __m128i g_coef_extended,
+                                                     const __m128i b_coef_extended) {
 
-    // Each coefficient is expanded by 2^15 (not 2^16 as we use signed integers to be able to use _mm_mulhrs_epi16),
-    // and rounded to int16 (add 0.5 for rounding). Cannot use shift because of float.
-    const __m128i r_coef_extended = _mm_set1_epi16((int16_t)(r_value_weighted * 32768.0 + 0.5));
-    const __m128i g_coef_extended = _mm_set1_epi16((int16_t)(g_value_weighted * 32768.0 + 0.5));
-    const __m128i b_coef_extended = _mm_set1_epi16((int16_t)(b_value_weighted * 32768.0 + 0.5));
 
     // Multiply input elements by 64 for improved accuracy.
     r_76543210 = _mm_slli_epi16(r_76543210, 6);
