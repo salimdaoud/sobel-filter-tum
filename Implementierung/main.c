@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Memory allocation failed\n");
         free(rgbData);
         rgbData = NULL;
-        free(tmp);
+        free(tmp - 8);
         tmp = NULL;
         free(result);
         result = NULL;

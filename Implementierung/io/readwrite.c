@@ -67,6 +67,15 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
         memcpy(*pixel_rgb_data, mapped_file + header_size, rgb_values);
     }
 
+    if (mapped_file) {
+        munmap(mapped_file, file_size);
+    }
+    if (file_descriptor) {
+        close(file_descriptor);
+    }
+
+    return;
+
     cleanup:
     if (mapped_file) {
         munmap(mapped_file, file_size);
@@ -74,6 +83,8 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     if (file_descriptor) {
         close(file_descriptor);
     }
+    
+    exit(EXIT_FAILURE);
 
 }
 
@@ -194,10 +205,17 @@ void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, 
 
     printf("\nData successfully written to given output file: '%s'.\n", filename);
 
+    if (file_descriptor) {
+        close(file_descriptor);
+    }
+    return;
+
     cleanup:
     if (file_descriptor) {
         close(file_descriptor);
     }
+
+    exit(EXIT_FAILURE);
 }
 
 void* write_thread_section(void* arg) {
