@@ -33,7 +33,7 @@ void img_to_grayscale_bitshift(const uint8_t* img, size_t width, size_t height,
 // Based on:    https://stackoverflow.com/questions/57832444/efficient-c-code-no-libs-
 //              for-image-transformation-into-custom-rgb-pixel-grey/57844027#57844027
 static __inline void extract_r_g_b_sorted(const __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0,
-                                          const __m128i bgr_7_bgr_6_bg_5,
+                                          const __m128i bgr_7_bgr_6_bgr_5_bgr_4,
                                           __m128i* r_76543210,
                                           __m128i* g_76543210,
                                           __m128i* b_76543210);
@@ -70,6 +70,8 @@ void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
         __m128i b_76543210;
 
         // Load 8 elements of each color channel R,G,B from first row. Load 24 (8 * 3 values) unaligned
+        // variable name is displayed as 128 bit integer. Within memory, values displayed in reversed order due to
+        // Little-Endianness
         __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0 = _mm_loadu_si128((__m128i*)(img + index_rgb));
         __m128i bgr_7_bgr_6_bgr_5_bgr_4           = _mm_loadu_si128((__m128i*)(img + index_rgb + 12));
 
@@ -111,40 +113,42 @@ void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
     }
 }
 
-static __inline void extract_r_g_b_sorted(const __m128i rgb_0_rgb_1_rgb_2_rgb_3_rgb_4_r5,
-                                          const __m128i rgb_4_rgb_5_rgb_6_rgb_7,
+static __inline void extract_r_g_b_sorted(const __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0,
+                                          const __m128i bgr_7_bgr_6_bgr_5_bgr_4,
                                           __m128i* r_76543210,
                                           __m128i* g_76543210,
                                           __m128i* b_76543210){
 
-// Shuffle mask for gathering 4 Red Values, 4 Green Values and 4 Blue Values
-// (also set last 4 elements to duplication of first 4 elements).
+    // Shuffle mask for gathering 4 Red Values, 4 Green Values and 4 Blue Values
+    // (also set last 4 elements to duplication of first 4 elements).
     const __m128i shuffle_mask = _mm_set_epi8(9,6,3,0,      // red
-                                              10,7,4,1,     // green
                                               11,8,5,2,    // blue
+                                              10,7,4,1,     // green
                                               9,6,3,0);    // red
 
-// Gather 4 Red Values, 4 Green Values and 4 Blue Values.
-    __m128i r_3210_g_3210_b_3210_r_3210 = _mm_shuffle_epi8(rgb_0_rgb_1_rgb_2_rgb_3_rgb_4_r5, shuffle_mask);
-    __m128i r_7654_g_7654_b_7654_r_7654 = _mm_shuffle_epi8(rgb_4_rgb_5_rgb_6_rgb_7, shuffle_mask);
+    // Gather 4 Red Values, 4 Green Values and 4 Blue Values. Order displayed as 128 bit integer. In memory, the data
+    // lies in reversed order due to Little-Endianness.
+    __m128i r_3210_b_3210_g_3210_r_3210 = _mm_shuffle_epi8(r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0, shuffle_mask);
+    __m128i r_7654_b_7654_g_7654_r_7654 = _mm_shuffle_epi8(bgr_7_bgr_6_bgr_5_bgr_4, shuffle_mask);
 
     // RED: Put 8 Red Values in lower part.
-    __m128i g_7654_b_7654_r_7654_r_3210 = _mm_alignr_epi8(r_7654_g_7654_b_7654_r_7654, r_3210_g_3210_b_3210_r_3210, 12);
+    __m128i colour_7654_3210 = _mm_alignr_epi8(r_7654_b_7654_g_7654_r_7654, r_3210_b_3210_g_3210_r_3210, 12);
+    // Unpack uint8 elements to uint16 elements.
+    *r_76543210 = _mm_cvtepu8_epi16(colour_7654_3210);
 
-    // BLUE: Put 8 Green Values in lower part.
-    __m128i g_3210_b_3210_r_3210_z_0000 = _mm_slli_si128(r_3210_g_3210_b_3210_r_3210, 4);
-    __m128i z_0000_z_0000_r_7654_g_7654 = _mm_srli_si128(r_7654_g_7654_b_7654_r_7654, 8);
-    __m128i z_0000_r_7654_g_7654_g_3210 = _mm_alignr_epi8(z_0000_z_0000_r_7654_g_7654, g_3210_b_3210_r_3210_z_0000, 12);
+    // GREEN: Put 8 Green Values in lower part.
+    __m128i g_3210_r_3210_z_0000_z_0000 = _mm_slli_si128(r_3210_b_3210_g_3210_r_3210, 8);
+    __m128i z_0000_r_7654_b_7654_g_7654 = _mm_srli_si128(r_7654_b_7654_g_7654_r_7654, 4);
+    colour_7654_3210 = _mm_alignr_epi8(z_0000_r_7654_b_7654_g_7654, g_3210_r_3210_z_0000_z_0000, 12);
+    // Unpack uint8 elements to uint16 elements.
+    *g_76543210 = _mm_cvtepu8_epi16(colour_7654_3210);
 
-    // GREEN: Put 8 Blue Values in lower part.
-    __m128i g_3210_b_3210_z_0000_z_0000 = _mm_slli_si128(r_3210_g_3210_b_3210_r_3210, 8);
-    __m128i z_0000_r_7654_g_7654_b_7654 = _mm_srli_si128(r_7654_g_7654_b_7654_r_7654, 4);
-    __m128i r_7654_g_7654_b_7654_b_3210 = _mm_alignr_epi8(z_0000_r_7654_g_7654_b_7654, g_3210_b_3210_z_0000_z_0000, 12);
-
-// Unpack uint8 elements to uint16 elements.
-    *r_76543210 = _mm_cvtepu8_epi16(g_7654_b_7654_r_7654_r_3210);
-    *g_76543210 = _mm_cvtepu8_epi16(z_0000_r_7654_g_7654_g_3210);
-    *b_76543210 = _mm_cvtepu8_epi16(r_7654_g_7654_b_7654_b_3210);
+    // BLUE: Put 8 Blue Values in lower part.
+    __m128i b_3210_g_3210_r_3210_z_0000 = _mm_slli_si128(r_3210_b_3210_g_3210_r_3210, 4);
+    __m128i z_0000_z_0000_r_7654_b_7654 = _mm_srli_si128(r_7654_b_7654_g_7654_r_7654, 8);
+    colour_7654_3210 = _mm_alignr_epi8(z_0000_z_0000_r_7654_b_7654, b_3210_g_3210_r_3210_z_0000, 12);
+    // Unpack uint8 elements to uint16 elements.
+    *b_76543210 = _mm_cvtepu8_epi16(colour_7654_3210);
 }
 
 // Calculate 8 Grayscale elements from 8 RGB Values.
