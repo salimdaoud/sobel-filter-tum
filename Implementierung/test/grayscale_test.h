@@ -8,7 +8,7 @@ void test_img_to_grayscale_naive (void);
 
 void test_img_to_grayscale_naive_little_weights (void);
 
-void test_img_to_grayscale_SIMD(void);
+void test_img_to_grayscale_simd(void);
 
 void test_img_to_grayscale(void);
 

@@ -13,12 +13,8 @@ int main(int argc, char* argv[]) {
     struct ParsedArgs args;
 
     // Parse command line arguments.
-    if (arg_parser(argc, argv, &args) == -1) {
+    if (parse_arguments(argc, argv, &args) == -1) {
         return EXIT_FAILURE;
-    }
-
-    if (args.test_flag) {
-        goto test_only;
     }
 
     int width, height;
@@ -27,8 +23,9 @@ int main(int argc, char* argv[]) {
     // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy.
     read_ppm_file(args.input_file, &width, &height, &rgbData, true);
 
-    // Allocate temporary buffer for grayscale and output buffer for the sobel filter result.
-    uint8_t* tmp = malloc(width * height);
+    // Allocate temporary buffer for grayscale and output buffer for the sobel filter result. +64 to avoid undefined
+    // behaviour when reading beyond limits with SIMD. Shift tmp 1 Byte to be able to read from -1 in Sobel.
+    uint8_t* tmp = malloc(width * height + 64) + 8;
     uint8_t* result = malloc(width * height);
 
     float r_value_weighted = args.rgb_coeffs[0];
@@ -39,38 +36,38 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Memory allocation failed\n");
         free(rgbData);
         rgbData = NULL;
-        free(tmp);
+        free(tmp - 8);
         tmp = NULL;
         free(result);
         result = NULL;
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
-    switch (args.version_flag) {
+    switch (args.version_number) {
         case 1:
-            printf("Squareroot lookup Sobel implementation used.\n");
-            if (args.benchmark_flag){
-                start_time_measurement();
-            }
-            for (size_t i = 0; i < args.repetitions; i++) {
-                sobel_squareroot_lookup_V1(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                        b_value_weighted, tmp, result);
-            }
-            if (args.benchmark_flag){
-                end_time_measurement("Sobel Squareroot Lookup");
-            }
-            break;
-        case 2:
             printf("Kernel unroll Sobel implementation used.\n");
             if (args.benchmark_flag){
                 start_time_measurement();
             }
             for (size_t i = 0; i < args.repetitions; i++) {
-                sobel_kernel_unroll_V2(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                    b_value_weighted, tmp, result);
+                sobel_V1(rgbData, width, height, r_value_weighted, g_value_weighted,
+                         b_value_weighted, tmp, result);
             }
             if (args.benchmark_flag){
                 end_time_measurement("Sobel Kernel Unroll");
+            }
+            break;
+        case 2:
+            printf("Separated Convolution Sobel implementation used.\n");
+            if (args.benchmark_flag){
+                start_time_measurement();
+            }
+            for (size_t i = 0; i < args.repetitions; i++) {
+                sobel_V2(rgbData, width, height, r_value_weighted, g_value_weighted,
+                         b_value_weighted, tmp, result);
+            }
+            if (args.benchmark_flag){
+                end_time_measurement("Sobel Separated Convolution");
             }
             break;
         case 3:
@@ -80,8 +77,8 @@ int main(int argc, char* argv[]) {
                     start_time_measurement();
                 }
                 for (size_t i = 0; i < args.repetitions; i++) {
-                    sobel_SIMD_V3(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                b_value_weighted, tmp, result);
+                    sobel_V3(rgbData, width, height, r_value_weighted, g_value_weighted,
+                             b_value_weighted, tmp, result);
                 }
                 if (args.benchmark_flag){
                     end_time_measurement("Sobel SIMD implementation");
@@ -93,27 +90,26 @@ int main(int argc, char* argv[]) {
                     start_time_measurement();
                 }
                 for (size_t i = 0; i < args.repetitions; i++) {
-                    sobel_naive_V0(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                b_value_weighted, tmp, result);
+                    sobel(rgbData, width, height, r_value_weighted, g_value_weighted,
+                          b_value_weighted, tmp, result);
                 }
                 if (args.benchmark_flag){
                     end_time_measurement("Naive Sobel Implementation");
                 }
                 break;
                 }
-
             break;
         case 4:
-            printf("Separated Convolution Sobel implementation used.\n");
+            printf("Squareroot lookup Sobel implementation used.\n");
             if (args.benchmark_flag){
                 start_time_measurement();
             }
             for (size_t i = 0; i < args.repetitions; i++) {
-                sobel_separated_convolution_V4(rgbData, width, height, r_value_weighted, g_value_weighted,
-                                            b_value_weighted, tmp, result);
+                sobel_squareroot_lookup_V1(rgbData, width, height, r_value_weighted, g_value_weighted,
+                                           b_value_weighted, tmp, result);
             }
             if (args.benchmark_flag){
-                end_time_measurement("Sobel Separated Convolution");
+                end_time_measurement("Sobel Squareroot Lookup");
             }
             break;
         default:
@@ -122,8 +118,8 @@ int main(int argc, char* argv[]) {
                 start_time_measurement();
             }
             for (size_t i = 0; i < args.repetitions; i++) {
-                sobel_naive_V0(rgbData, width, height, r_value_weighted, g_value_weighted,
-                            b_value_weighted, tmp, result);
+                sobel(rgbData, width, height, r_value_weighted, g_value_weighted,
+                      b_value_weighted, tmp, result);
             }
             if (args.benchmark_flag){
                 end_time_measurement("Naive Sobel Implementation");
@@ -141,7 +137,7 @@ int main(int argc, char* argv[]) {
         args.output_file = malloc(strlen(args.input_file) + 1 );
         if (args.output_file == NULL) {
             fprintf(stderr, "Memory allocation failed.\n");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         strcpy(args.output_file, args.input_file);
         char *dot = strrchr(args.output_file, '.');
@@ -155,59 +151,8 @@ int main(int argc, char* argv[]) {
     // Free memory.
     clean_up_time_measurement();
     free(rgbData);
-    free(tmp);
+    free(tmp - 8);
     free(result);
-
-
-    test_only:
-    if (args.test_flag) {
-        #include "test/sobel_test.h"
-        #include "test/readwrite_test.h"
-        #include "test/grayscale_test.h"
-
-        printf("\n");
-
-        // Grayscale functions.
-        test_img_to_grayscale_naive();
-        test_img_to_grayscale_naive_little_weights();
-        test_img_to_grayscale_SIMD();
-        test_img_to_grayscale();
-        test_img_to_grayscale_bitshift();
-        test_img_to_grayscale_SIMD_8_pixels();
-
-        // Sobel functions.
-        test_sobel_naive_V0();
-        test_sobel_kernel_unroll_V2();
-        test_sobel_SIMD_V3();
-        test_sobel_squareroot_lookup_V1();
-        test_sobel_separated_convolution_V4();
-
-        // Read/Write
-        test_parse_ppm_header_correct_header();
-        test_parse_ppm_header_incorrect_header();
-        test_read_ppm_correct_file();
-        test_read_ppm_correct_file_parallel();
-        test_read_ppm_incorrect_file();
-        // TODO: fix read write tests and adapt them to fit into test scheme
-        // test_write_pgm_file();
-        // test_read_ppm_incorrect_file_maxval();
-
-        int test_result = (global_failed_tests != 0);
-
-        printf("============================================================================================"
-               "======================\n"
-               "Test Run %s: %d of %d passed. %d failed.\n",
-               test_result ? "FAILED" : "SUCCESSFUL",
-               global_total_tests - global_failed_tests,
-               global_total_tests, global_failed_tests);
-
-        // This doesn't have any effect but suppressing a compiler warning.
-        (void) function_name;
-        (void) file;
-    }
     
-    
-    return 0;
-
-
+    return EXIT_SUCCESS;
 }

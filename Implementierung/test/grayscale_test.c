@@ -36,7 +36,7 @@ void test_img_to_grayscale_naive_little_weights(void) {
     }
 }
 
-void test_img_to_grayscale_SIMD(void) {
+void test_img_to_grayscale_simd(void) {
     uint8_t img [30] = {177, 233, 117, 244, 139, 96, 151, 94, 147, 125,
                         118, 245, 95, 78, 207, 163, 181, 82, 20, 196,
                         64, 198, 178, 31, 122, 253, 236, 153, 47, 215};
@@ -45,7 +45,7 @@ void test_img_to_grayscale_SIMD(void) {
 
     uint8_t actual[10] = {0};
 
-    img_to_grayscale_SIMD(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
+    img_to_grayscale_simd(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
 
     bool test_result = uint8_array_equal(expected, actual, 10);
     ASSERT_TRUE("Grayscale SIMD Basic Test", test_result);
@@ -63,7 +63,7 @@ void test_img_to_grayscale(void) {
 
     uint8_t actual[10] = {0};
 
-    img_to_grayscale(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
+    img_to_grayscale_loop_unroll(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
 
     bool test_result = uint8_array_equal(expected, actual, 10);
     ASSERT_TRUE("Grayscale Basic Test", test_result);
@@ -99,7 +99,7 @@ void test_img_to_grayscale_SIMD_8_pixels(void) {
 
     uint8_t actual[10] = {0};
 
-    img_to_grayscale_simd_8_pixels(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
+    img_to_grayscale_simd(img, 10, 1, 0.299f, 0.587f, 0.114f, actual);
 
     bool test_result = uint8_array_equal(expected, actual, 10);
     ASSERT_TRUE("Grayscale SIMD 8 pixels Basic Test", test_result);

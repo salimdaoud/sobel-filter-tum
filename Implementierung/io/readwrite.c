@@ -1,9 +1,11 @@
+#define _POSIX_C_SOURCE 200809L
 #include "readwrite.h"
 
 // Main function: Read PPM file sequentially.
 void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pixel_rgb_data, bool use_io_threading) {
     // Open and validate the file
     size_t file_size;
+    char* mapped_file = NULL;
 
     int file_descriptor;
     if ((file_descriptor = open_and_validate_file(file_name, &file_size)) == -1) {
@@ -11,7 +13,6 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     }
 
     // Memory-map the file. Not necessary for sequential implementation, but we wanted to make it uniform.
-    char* mapped_file = NULL;
     if ((mapped_file = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0))
         == MAP_FAILED) {
         fprintf(stderr, "Error mapping file.\n");
@@ -36,7 +37,8 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
                         "Number of pixels is ambiguous.\n", file_name);
     }
 
-    if (!(*pixel_rgb_data = malloc(rgb_values))) {
+    // Allocate 64 Byte more to not read beyond bounds by accident.
+    if (!(*pixel_rgb_data = malloc(rgb_values + 64))) {
         fprintf(stderr, "Error reading file: Could not allocate enough memory.\n");
         goto cleanup;
     }
@@ -65,6 +67,15 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
         memcpy(*pixel_rgb_data, mapped_file + header_size, rgb_values);
     }
 
+    if (mapped_file) {
+        munmap(mapped_file, file_size);
+    }
+    if (file_descriptor) {
+        close(file_descriptor);
+    }
+
+    return;
+
     cleanup:
     if (mapped_file) {
         munmap(mapped_file, file_size);
@@ -72,6 +83,8 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     if (file_descriptor) {
         close(file_descriptor);
     }
+    
+    exit(EXIT_FAILURE);
 
 }
 
@@ -80,8 +93,8 @@ int open_and_validate_file(const char* file_name, size_t* file_size) {
     int file_descriptor = open(file_name, O_RDONLY);
 
     if (file_descriptor == -1) {
-        fprintf(stderr, "Error opening file.\n");
-        exit(1);
+        fprintf(stderr, "Error opening given input file: '%s'.\n", file_name);
+        exit(EXIT_FAILURE);
     }
 
     struct stat statbuf;
@@ -190,10 +203,19 @@ void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, 
         }
     }
 
+    printf("\nData successfully written to given output file: '%s'.\n", filename);
+
+    if (file_descriptor) {
+        close(file_descriptor);
+    }
+    return;
+
     cleanup:
     if (file_descriptor) {
         close(file_descriptor);
     }
+
+    exit(EXIT_FAILURE);
 }
 
 void* write_thread_section(void* arg) {
@@ -202,7 +224,7 @@ void* write_thread_section(void* arg) {
     if (pwrite(thread_data->file_descriptor, thread_data->data + thread_data->start,
                thread_data->size, thread_data->start + thread_data->header_offset) < 0) {
         fprintf(stderr, "Error writing pixel data into output file.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     return NULL;
