@@ -22,9 +22,9 @@ int main(int argc, char* argv[]) {
     // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy.
     read_ppm_file(args.input_file, &width, &height, &rgbData, true);
 
-    // Allocate temporary buffer for grayscale and output buffer for the sobel filter result. +8 to avoid undefined
-    // behaviour when reading beyond limits with SIMD
-    uint8_t* tmp = malloc(width * height + 8);
+    // Allocate temporary buffer for grayscale and output buffer for the sobel filter result. +64 to avoid undefined
+    // behaviour when reading beyond limits with SIMD. Shift tmp 1 Byte to be able to read from -1 in Sobel.
+    uint8_t* tmp = malloc(width * height + 64) + 8;
     uint8_t* result = malloc(width * height);
 
     float r_value_weighted = args.rgb_coeffs[0];
@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
     // Free memory.
     clean_up_time_measurement();
     free(rgbData);
-    free(tmp);
+    free(tmp - 8);
     free(result);
     
     return EXIT_SUCCESS;

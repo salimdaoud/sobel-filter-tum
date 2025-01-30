@@ -259,7 +259,6 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
             __m128i gradient_hor_low = _mm_unpacklo_epi16(gradient_hor, _mm_setzero_si128());
             __m128i gradient_hor_high = _mm_unpackhi_epi16(gradient_hor, _mm_setzero_si128());
 
-            // Compute squared sum for gradient_vert and gradient_hor
             __m128i squared_vert_low = _mm_mullo_epi32(gradient_vert_low, gradient_vert_low);
             __m128i squared_vert_high = _mm_mullo_epi32(gradient_vert_high, gradient_vert_high);
 

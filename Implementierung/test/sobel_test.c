@@ -55,7 +55,7 @@ void test_sobel_SIMD_V3(void) {
 
     uint8_t gray[12] = {0};
 
-    uint8_t* actual = malloc(12);
+    uint8_t actual[12] = {0};
 
     sobel_V3(img, 4, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 

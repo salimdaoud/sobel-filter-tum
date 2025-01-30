@@ -37,7 +37,8 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
                         "Number of pixels is ambiguous.\n", file_name);
     }
 
-    if (!(*pixel_rgb_data = malloc(rgb_values))) {
+    // Allocate 64 Byte more to not read beyond bounds by accident.
+    if (!(*pixel_rgb_data = malloc(rgb_values + 64))) {
         fprintf(stderr, "Error reading file: Could not allocate enough memory.\n");
         goto cleanup;
     }
