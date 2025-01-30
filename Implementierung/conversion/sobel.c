@@ -51,7 +51,6 @@ void sobel(const uint8_t* img, size_t width, size_t height,
             result[gray_y * width + gray_x] = (uint8_t)magnitude;
         }
     }
-
 }
 
 // Kernel Unroll
@@ -268,20 +267,22 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
             __m128i squared_sum_low = _mm_add_epi32(squared_vert_low, squared_hor_low);
             __m128i squared_sum_high = _mm_add_epi32(squared_vert_high, squared_hor_high);
 
+            // LOWER part of squared sum register.
             __m128 squared_sum_float = _mm_cvtepi32_ps(squared_sum_low);
             __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
 
-            // Clamp to 255 and convert to 8-bit integer
+            // Clamp to 255 and convert to 8-bit integer.
             gradient_float = _mm_round_ps(gradient_float, _MM_FROUND_TO_ZERO);
             gradient_float = _mm_min_ps(gradient_float, _mm_set1_ps(255.0f));
             __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
             __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
             __m128i pack_8_low = _mm_packus_epi16(pack_16, pack_16);
 
+            // HIGHER part of squared sum register.
             squared_sum_float = _mm_cvtepi32_ps(squared_sum_high);
             gradient_float = _mm_sqrt_ps(squared_sum_float);
 
-            // Clamp to 255 and convert to 8-bit integer
+            // Clamp to 255 and convert to 8-bit integer.
             gradient_float = _mm_round_ps(gradient_float, _MM_FROUND_TO_ZERO);
             gradient_float = _mm_min_ps(gradient_float, _mm_set1_ps(255.0f));
             gradient_i = _mm_cvtps_epi32(gradient_float);
@@ -290,15 +291,9 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
 
             __m128i pack_8 = _mm_alignr_epi8(pack_8_high, pack_8_low, 12);
 
-            if (gray_y == height - 1 && gray_x >= border_pixels_row) {
-                uint8_t temp[8] = {0};
-                _mm_storel_epi64((__m128i*) temp, pack_8);
-                for (size_t i = 0; i < remaining_pixels_row; i++) {
-                    result[row_offset + gray_x + i] = temp[i];
-                }
-            } else {
-                _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
-            }
+            // We don't have to treat the last row differently as we allocated more memory than necessary and the write
+            // function only checks for width * height.
+            _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
 
         }
         image_row_prev += width;
@@ -427,7 +422,7 @@ void sobel_V2(const uint8_t* img, size_t width, size_t height,
     temporary_sum = temporary_sum_start;
     temporary_sum_2 = temporary_sum_2_start;
 
-    //loop unroll for first row
+    // Loop unroll for first row.
     for (size_t gray_x = 0; gray_x < width; gray_x++) {
         sum = 0;
         sum2 = 0;
@@ -468,7 +463,7 @@ void sobel_V2(const uint8_t* img, size_t width, size_t height,
         }
     }
 
-        // loop unroll for last row
+    // Loop unroll for last row.
     for (size_t gray_x = 0; gray_x < width; gray_x++) {
         sum = 0;
         sum2 = 0;
@@ -487,7 +482,7 @@ void sobel_V2(const uint8_t* img, size_t width, size_t height,
         }
     }
 
-    // reset the result pointer
+    // Reset the result pointer.
     result = result_start;
 
     free(temporary_sum);

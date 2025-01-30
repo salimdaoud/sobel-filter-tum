@@ -83,7 +83,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
     if (file_descriptor) {
         close(file_descriptor);
     }
-    
+
     exit(EXIT_FAILURE);
 
 }
