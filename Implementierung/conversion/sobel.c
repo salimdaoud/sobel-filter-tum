@@ -111,7 +111,7 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
               float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*) tmp;
-    img_to_grayscale_simd_another(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale_simd_5_pixels(img, width, height, a, b, c, grayscale_image);
 
     // Store 1 set of 8 values for each row of the Sobel Matrix.
     uint8_t* image_row_prev = grayscale_image - width;
