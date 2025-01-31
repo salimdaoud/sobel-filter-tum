@@ -111,7 +111,7 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
               float a, float b, float c, void* tmp, uint8_t* result) {
 
     uint8_t* grayscale_image = (uint8_t*) tmp;
-    img_to_grayscale_simd_5_pixels(img, width, height, a, b, c, grayscale_image);
+    img_to_grayscale_simd(img, width, height, a, b, c, grayscale_image);
 
     // Store 1 set of 8 values for each row of the Sobel Matrix.
     uint8_t* image_row_prev = grayscale_image - width;
@@ -287,7 +287,7 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
             __m128i pack_8 = _mm_alignr_epi8(pack_8_high, pack_8_low, 12);
 
             // We don't have to treat the last row differently as we allocated more memory than necessary and the write
-            // function only checks for width * height.
+            // function only checks for width * height so additional pixel just won't be written
             _mm_storel_epi64((__m128i*) (result + row_offset + gray_x), pack_8);
 
         }
