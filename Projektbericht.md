@@ -76,17 +76,17 @@ Dies ist hier ein wenig langsamer bei unserem Beispiel, da wir nur 3x3 Filter ve
 
 ## 3 Performanzmessungen
 ### 3.1 Messumgebung
-Getestet wurde auf einem System mit einem Intel i5-8250U Prozessor, 1.60 GHZ, 4 GB Arbeitsspeicher, Ubuntu 24.04.1 LTS, 64 Bit, Linux-Kernel 6.8.0-51-generic.
-Kompiliert wurde mit GCC 13.3.0 mit der Option -O3.
+Getestet wurde auf einem System mit einem AMD Ryzen 5 4680U Prozessor, 2.20 GHZ, 8 GB Arbeitsspeicher, Ubuntu 24.10, 64 Bit, Linux-Kernel 6.11.
+Kompiliert wurde mit GCC 13.3.0 mit der Option -O2.
 
 ### 3.2 Methodik
-Die Berechnungen wurden mit Eingabegrößen von 512×512 bis 5184×3456 Pixeln jeweils 20-mal durchgeführt und das arithmetische Mittel für jede Eingabegröße wurde in folgendes Diagramm eingetragen.
+Die Berechnungen wurden mit Eingabegrößen von 640×426 bis 5184×3456 Pixeln jeweils 1000-mal durchgeführt und das arithmetische Mittel für jede Eingabegröße wurde in folgendes Diagramm eingetragen.
 
 ### 3.3 Ergebnisse
-[Sobel-Filter Performanz Diagramm](https://postimg.cc/Mfw0WDkk)
+<img src="Sobel_Benchmark.png" alt="Sobel Filter Result" width="512">
 
 In unserem Testrahmen mit der Referenzimplementierung als Standard, konnten wir feststellen, dass die SIMD-Implementierung, wie erwartet, die schnellste ist, vor allem bei größeren Bildern.
-Die spezielleren Versuche den Algorithmus zu verbessern, haben zu wenig bis keiner Verbesserung der Laufzeit geführt (zumindest bei derzeitiger Methodik).
+Die spezielleren Versuche den Algorithmus zu verbessern, haben zu eher kleineren Verbesserung der Laufzeit geführt (zumindest bei derzeitiger Methodik).
 Lookup-Tabellen hingegen haben unsere Laufzeit deutlich verschlechtert.
 
 ## 4 Anteile der einzelnen Projektmitglieder
@@ -99,11 +99,11 @@ Lookup-Tabellen hingegen haben unsere Laufzeit deutlich verschlechtert.
 ### 4.2 Luca Tänzler
 - Erste Zeitmessung für Sobel-Filter und Graustufen-Konvertierung
 - Implementierung einer simplen Quadratwurzel-Funktion
-- Verfassen des Projektberichts
-- Erstellen der Präsentationsfolien
+- Verfassen des Projektberichts und der Präsentationsfolien
+- Durchführung der Performanzmessungen
 
 ### 4.3 Salim Daoud
 - Erste naive Sobel Implementierung mit Makefile und Argumenten-Verarbeitung
 - Graustufen-Konvertierung mit SIMD und paralleles Lesen und Schreiben
+- Erste Implementierung von Sobel SIMD und kernel unroll
 - Tests zum Prüfen von Korrektheit
-- Durchführung der Performanzmessungen
