@@ -20,5 +20,8 @@ void img_to_grayscale_naive(const uint8_t* img, size_t width, size_t height,
 void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
                            float a, float b, float c, uint8_t* gray);
 
+void img_to_grayscale_simd_5_pixels(const uint8_t* img, size_t width, size_t height,
+                                    float a, float b, float c, uint8_t* gray);
+
 
 #endif

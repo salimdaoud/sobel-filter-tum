@@ -127,6 +127,7 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
     __m128i zero_mask_mid_pixels;
     __m128i zero_mask_right_pixels;
     __m128i zero_mask_drop_first_1_word = _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF0000);
+    __m128i max_value_extended = _mm_set1_epi32(255);
 
     switch (width % 8) {
         case 0:
@@ -272,22 +273,16 @@ void sobel_V3(const uint8_t* img, size_t width, size_t height,
             __m128 gradient_float = _mm_sqrt_ps(squared_sum_float);
 
             // Clamp to 255 and convert to 8-bit integer.
-            gradient_float = _mm_round_ps(gradient_float, _MM_FROUND_TO_ZERO);
-            gradient_float = _mm_min_ps(gradient_float, _mm_set1_ps(255.0f));
-            __m128i gradient_i = _mm_cvtps_epi32(gradient_float);
-            __m128i pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
-            __m128i pack_8_low = _mm_packus_epi16(pack_16, pack_16);
+            __m128i gradient_i = _mm_min_epu32(_mm_cvttps_epi32(gradient_float), max_value_extended);
+            __m128i pack_8_low = _mm_packus_epi16(_mm_packus_epi32(gradient_i, gradient_i), _mm_packus_epi32(gradient_i, gradient_i));
 
             // HIGHER part of squared sum register.
             squared_sum_float = _mm_cvtepi32_ps(squared_sum_high);
             gradient_float = _mm_sqrt_ps(squared_sum_float);
 
             // Clamp to 255 and convert to 8-bit integer.
-            gradient_float = _mm_round_ps(gradient_float, _MM_FROUND_TO_ZERO);
-            gradient_float = _mm_min_ps(gradient_float, _mm_set1_ps(255.0f));
-            gradient_i = _mm_cvtps_epi32(gradient_float);
-            pack_16 = _mm_packus_epi32(gradient_i, gradient_i);
-            __m128i pack_8_high = _mm_packus_epi16(pack_16, pack_16);
+            gradient_i = _mm_min_epu32(_mm_cvttps_epi32(gradient_float), max_value_extended);
+            __m128i pack_8_high = _mm_packus_epi16(_mm_packus_epi32(gradient_i, gradient_i), _mm_packus_epi32(gradient_i, gradient_i));
 
             __m128i pack_8 = _mm_alignr_epi8(pack_8_high, pack_8_low, 12);
 
