@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     // Allocate temporary buffer for grayscale and output buffer for the sobel filter result. +64 to avoid undefined
     // behaviour when reading beyond limits with SIMD. Shift tmp 1 Byte to be able to read from -1 in Sobel.
     uint8_t* tmp = malloc(width * height + 64) + 8;
-    uint8_t* result = malloc(width * height);
+    uint8_t* result = malloc(width * height + 64);
 
     float r_value_weighted = args.rgb_coeffs[0];
     float g_value_weighted = args.rgb_coeffs[1];
@@ -125,11 +125,9 @@ int main(int argc, char* argv[]) {
                 end_time_measurement("Naive Sobel Implementation");
             }
             break;
-        }
+    }
 
-    
-
-    // Write result to PGM
+    // Write result to PGM.
     if (args.output_file != NULL){
         // TODO: decide how to treat read write threading
         write_pgm_file(args.output_file, result, width, height, true);
