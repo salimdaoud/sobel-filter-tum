@@ -20,14 +20,11 @@ void run_all_tests() {
     test_sobel_separated_convolution_V4();
 
     // Read/Write
-    //test_parse_ppm_header_correct_header();
-    //test_parse_ppm_header_incorrect_header();
-    //test_read_ppm_correct_file();
-    //test_read_ppm_correct_file_parallel();
-    //test_read_ppm_incorrect_file();
-    // TODO: fix read write tests and adapt them to fit into test scheme
-    // test_write_pgm_file();
-    // test_read_ppm_incorrect_file_maxval();
+    test_parse_ppm_header_correct_header();
+    test_parse_ppm_header_incorrect_header();
+    test_read_ppm_correct_file();
+    test_read_ppm_correct_file_parallel();
+    test_write_pgm_file();
 
     int test_result = (global_failed_tests != 0);
 

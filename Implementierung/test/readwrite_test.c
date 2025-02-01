@@ -42,6 +42,7 @@ void test_read_ppm_correct_file_parallel(void) {
     ASSERT_TRUE("Parser PPM Header Parsing Parallel Test", uint8_array_equal(expected_pixels, pixel_rgb_data, 27));
 }
 
+// We removed this function from the test runner as it was causing the application to exit. This is the desired outcome.
 //width and height do not correspond to given pixels
 void test_read_ppm_incorrect_file(void) {
     char file_data[] =  "test/binary_incorrect_file.ppm";
@@ -56,8 +57,7 @@ void test_read_ppm_incorrect_file(void) {
     ASSERT_TRUE("Parser PPM Header vs Data Mismatch Test", uint8_array_equal(expected_pixels, pixel_rgb_data, 27));
 }
 
-//max_val is is less than 0 or greater 255
-// does this make sense? -> uint8
+// We removed this function from the test runner as it was causing the application to exit. This is the desired outcome.
 void test_read_ppm_incorrect_file_maxval(void) {
     char file_data[] =  "test/binary_incorrect_file_maxval.ppm";
     int width, height;
@@ -73,7 +73,7 @@ void test_read_ppm_incorrect_file_maxval(void) {
 
 
 void test_write_pgm_file(void) {
-    char file_name[] = "test/binary_write_file.pgm";
+    char file_name[] = "binary_write_file.pgm";
     int width = 3;
     int height = 3;
     uint8_t sobel_pixels[] = {
