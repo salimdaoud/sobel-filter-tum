@@ -5,7 +5,7 @@
 # entry point for the program and target name
 MAIN := main.c
 
-# assignment task file TODO: make this find the files automatically
+# assignment task file
 IMPLEMENTIERUNG :=	$(wildcard conversion/*.c) \
 					$(wildcard io/*.c) \
 					$(wildcard util/*.c) \
@@ -29,18 +29,18 @@ SOURCES := $(MAIN) $(IMPLEMENTIERUNG)
 TARGET := $(basename $(MAIN))
 
 # Default to release build for both app and library
-all: debug
+all: release
 
 # Debug build
 debug: CFLAGS += -g -O0
 debug: $(TARGET)
 
 # Release build
-release: CFLAGS += -O2 
+release: CFLAGS += -O2
 release: $(TARGET)
 
 # Performance Benchmarking
-perf: CFLAGS += -O3
+perf: CFLAGS += -O2 -pg
 perf: $(TARGET)
 	  @echo "Running performance benchmarks..."
 
@@ -53,5 +53,3 @@ clean:
 	rm -f $(TARGET)
 
 .PHONY: all debug release perf clean
-
-# TODO: automate performance tests

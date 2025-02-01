@@ -49,9 +49,6 @@ static __inline __m128i convert_rgb_to_gray_8_pixels(__m128i r_76543210,
 void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
                            float a, float b, float c, uint8_t* gray){
     size_t rgb_size = height * width * 3;
-    size_t simd_size = rgb_size - (rgb_size % 24);
-    size_t index_rgb = 0;
-    size_t index_gray = 0;
 
     int16_t r_value_weight_fixed = (int16_t)(a * 32768.0 + 0.5);
     int16_t g_value_weight_fixed = (int16_t)(b * 32768.0 + 0.5);
@@ -88,7 +85,7 @@ void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
     }
 
     //Process one row per iteration.
-    for (; index_rgb < simd_size; index_rgb += 24, index_gray += 8) {
+    for (size_t index_rgb = 0, index_gray = 0; index_rgb < rgb_size; index_rgb += 24, index_gray += 8) {
 
         __m128i r_76543210;
         __m128i g_76543210;
@@ -118,14 +115,7 @@ void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
         // Store 8 elements of Y in row Y0, and 8 elements of Y in row Y1.
         _mm_storel_epi64((__m128i*)(gray + index_gray), gray_8_76543210);
     }
-
-    // Handle the rest of the pixels. Naive implementation as there are at most 23 values.
-    size_t pixels_left = rgb_size % 24;
-
-    for (size_t i = 0;  i < pixels_left; index_gray++, i += 3) {
-        size_t idx = index_rgb + i;
-        gray[index_gray] = (uint8_t)(a * img[idx] + b * img[idx + 1] + c * img[idx + 2]);
-    }
+    // we do not need to handle the remaining pixels as we allocated more memory than necessary to have padding.
 }
 
 static __inline void extract_r_g_b_sorted(const __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0,

@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     uint8_t* rgbData = NULL;
 
     // We need to pass a pointer to the pointer of rgbData to be able to change the pointer globally, not just the copy.
-    read_ppm_file(args.input_file, &width, &height, &rgbData, true);
+    read_ppm_file(args.input_file, &width, &height, &rgbData, false);
 
     // Allocate temporary buffer for grayscale and output buffer for the sobel filter result. +64 to avoid undefined
     // behaviour when reading beyond limits with SIMD. Shift tmp 1 Byte to be able to read from -1 in Sobel.
@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
     // Write result to PGM.
     if (args.output_file != NULL){
         // TODO: decide how to treat read write threading
-        write_pgm_file(args.output_file, result, width, height, true);
+        write_pgm_file(args.output_file, result, width, height, false);
     } else {
         args.output_file = malloc(strlen(args.input_file) + 1 );
         if (args.output_file == NULL) {

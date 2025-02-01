@@ -94,6 +94,7 @@ Lookup-Tabellen hingegen haben unsere Laufzeit deutlich verschlechtert.
 - Refactoring und generelle Code Verbesserungen
 - Implementierung von Sobel mit separierten Filtern
 - Implementierung des Sobel-Filters mit SIMD mit 8 Pixeln
+- Implementierung Grayscaling mit SIMD
 - Erstellen von Grafiken für die Präsentation
 
 ### 4.2 Luca Tänzler
