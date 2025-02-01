@@ -35,6 +35,7 @@ void read_ppm_file(const char* file_name, int* width, int* height, uint8_t** pix
    if (file_size !=  rgb_values + header_size) {
         fprintf(stderr, "Failed! Provided file %s is not a regular PPM image. "
                         "Number of pixels is ambiguous.\n", file_name);
+        goto cleanup;
     }
 
     // Allocate 64 Byte more to not read beyond bounds by accident.
