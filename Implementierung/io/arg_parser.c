@@ -6,9 +6,12 @@ void print_help() {
            "%-7s program <inputfile> [options]\n", "");
     printf("\nOptions:\n");
     printf("%-7s [%s] <%s> %s\n", "", "-V", "Zahl", " -  Specify the implementation version (default: 0)");
-    printf("%-7s [%s]=<%s> %s\n", "", "-B", "Zahl", " -  Measure the implementation version runtime with optional repetitions (default: 1). No space between option identifier and argument allowed.");
+    printf("%-7s [%s]=<%s> %s\n", "", "-B", "Zahl", " -  Measure the implementation version runtime with "
+                                                    "optional repetitions (default: 1). No space between option"
+                                                    " identifier and argument allowed.");
     printf("%-7s [%s] <%s> %-s\n", "", "-o", "Dateiname", " -  Specify output file");
-    printf("%-7s [%s] <%s> <%s> <%s> %s\n", "", "--rgb_coeffs", "a", "b", "c", " -  Set coefficients a, b, and c for Grayscale conversion");
+    printf("%-7s [%s] <%s> <%s> <%s> %s\n", "", "--rgb_coeffs", "a", "b", "c", " -  Set coefficients a, b, and c "
+                                                                               "for Grayscale conversion");
     printf("%-7s [%s] %s\n", "", "-t", " -  Run the tests");
     printf("%-7s [%s] %s\n", "", "-h/--help", " -  Show this help message and exit");
 }
@@ -114,7 +117,7 @@ int parse_arguments (int argc, char *argv[], struct ParsedArgs *args) {
                     errno = 0;
                     char* endptr;
                     args->rgb_coeffs[i] = strtod(argv[optind + i - 1], &endptr);
-                    if (endptr == argv[optind + i] || *endptr != '\0') {
+                    if (endptr == argv[optind + i - 1] || *endptr != '\0') {
                         fprintf(stderr, "RGB coefficient argument '%s' (index [%d]) could not be converted "
                                         "to double.\n",argv[optind + i - 1], i);
                         exit(EXIT_FAILURE);
