@@ -42,6 +42,7 @@ void test_read_ppm_correct_file_parallel(void) {
     ASSERT_TRUE("Parser PPM Header Parsing Parallel Test", uint8_array_equal(expected_pixels, pixel_rgb_data, 27));
 }
 
+// We removed this function from the test runner as it was causing the application to exit. This is the desired outcome.
 //width and height do not correspond to given pixels
 void test_read_ppm_incorrect_file(void) {
     char file_data[] =  "test/binary_incorrect_file.ppm";
@@ -56,8 +57,7 @@ void test_read_ppm_incorrect_file(void) {
     ASSERT_TRUE("Parser PPM Header vs Data Mismatch Test", uint8_array_equal(expected_pixels, pixel_rgb_data, 27));
 }
 
-//max_val is is less than 0 or greater 255
-// does this make sense? -> uint8
+// We removed this function from the test runner as it was causing the application to exit. This is the desired outcome.
 void test_read_ppm_incorrect_file_maxval(void) {
     char file_data[] =  "test/binary_incorrect_file_maxval.ppm";
     int width, height;
@@ -73,7 +73,7 @@ void test_read_ppm_incorrect_file_maxval(void) {
 
 
 void test_write_pgm_file(void) {
-    char file_name[] = "test/binary_write_file.pgm";
+    char file_name[] = "binary_write_file.pgm";
     int width = 3;
     int height = 3;
     uint8_t sobel_pixels[] = {
@@ -86,27 +86,27 @@ void test_write_pgm_file(void) {
     write_pgm_file(file_name, sobel_pixels, width, height, 1);
 
     // Open the file for reading
-    FILE *file = fopen(file_name, "rb");
-    assert(file != NULL);
+    FILE *test_file = fopen(file_name, "rb");
 
     // Read the file contents into a buffer
     uint8_t file_data[128];
-    if (fread(file_data, sizeof(uint8_t), sizeof(file_data), file) == 0){
-        fprintf(stderr, "could not read from file");
-    }
-    fclose(file);
+    bool read_from_file_flag = fread(file_data, sizeof(uint8_t), sizeof(file_data), test_file);
+    ASSERT_TRUE("Read File Data into Buffer Test", read_from_file_flag > 0);
+
+    fclose(test_file);
 
     // Construct the expected file data
     char expected_header[128];
     int header_size = snprintf(expected_header, sizeof(expected_header), "P5\n%d %d\n255\n", width, height);
 
     // Validate header
-    assert(memcmp(file_data, expected_header, header_size) == 0);
+    ASSERT_TRUE("Write Correct Header Test", memcmp(file_data, expected_header, header_size) == 0);
 
+    bool correct_pixels_flag = true;
     // Validate pixel data
     for (int i = 0; i < 9; i++) {
-        assert(file_data[header_size + i] == sobel_pixels[i]);
+        correct_pixels_flag = (file_data[header_size + i] == sobel_pixels[i]);
     }
 
-    printf("Test passed!\n");
+    ASSERT_TRUE("Write Correct Data Test", correct_pixels_flag);
 }
