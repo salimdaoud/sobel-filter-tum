@@ -76,7 +76,7 @@ Dies ist hier ein wenig langsamer bei unserem Beispiel, da wir nur 3x3 Filter ve
 
 ## 3 Performanzmessungen
 ### 3.1 Messumgebung
-Getestet wurde auf einem System mit einem AMD Ryzen 5 4680U Prozessor, 2.20 GHZ, 8 GB Arbeitsspeicher, Ubuntu 24.10, 64 Bit, Linux-Kernel 6.11.
+Getestet wurde auf einem System mit einem AMD Ryzen 5 4680U Prozessor, 2.20 GHz, 8 GB Arbeitsspeicher, Ubuntu 24.10, 64 Bit, Linux-Kernel 6.11.
 Kompiliert wurde mit GCC 13.3.0 mit der Option -O2.
 
 ### 3.2 Methodik
@@ -93,8 +93,7 @@ Lookup-Tabellen hingegen haben unsere Laufzeit deutlich verschlechtert.
 ### 4.1 Tobias Langer
 - Refactoring und generelle Code Verbesserungen
 - Implementierung von Sobel mit separierten Filtern
-- Implementierung des Sobel-Filters mit SIMD mit 8 Pixeln
-- Implementierung Grayscaling mit SIMD
+- Implementierung von Graustufen-Konvertierung und Sobel-Filter mit SIMD mit 8 Pixeln
 - Erstellen von Grafiken für die Präsentation
 
 ### 4.2 Luca Tänzler

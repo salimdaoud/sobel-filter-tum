@@ -103,7 +103,7 @@ int parse_arguments (int argc, char *argv[], struct ParsedArgs *args) {
                     if (check_file_extension(optarg, "pgm")) {
                         args->output_file = optarg;
                     } else {
-                        fprintf(stderr, "Error: Incorrect output file format. Format must be of type '.pgm'.");
+                        fprintf(stderr, "Error: Incorrect output file format. Format must be of type '.pgm'.\n");
                         exit(EXIT_FAILURE);
                     }
                 }
@@ -150,7 +150,7 @@ int parse_arguments (int argc, char *argv[], struct ParsedArgs *args) {
         if (check_file_extension(argv[optind], "ppm")) {
             args->input_file = argv[optind];
         } else {
-            fprintf(stderr, "Error: Incorrect output file format. Format must be of type '.ppm'.");
+            fprintf(stderr, "Error: Incorrect output file format. Format must be of type '.ppm'.\n");
             exit(EXIT_FAILURE);
         }
     } else {
