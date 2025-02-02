@@ -7,17 +7,17 @@ void run_all_tests() {
     // Grayscale functions.
     test_img_to_grayscale_naive();
     test_img_to_grayscale_naive_little_weights();
-    test_img_to_grayscale_simd();
-    test_img_to_grayscale();
+    test_img_to_grayscale_simd_5_pixels();
+    test_img_to_grayscale_simd_8_pixels();
+    test_img_to_grayscale_loop_unroll();
     test_img_to_grayscale_bitshift();
-    test_img_to_grayscale_SIMD_8_pixels();
 
     // Sobel functions.
     test_sobel_naive_V0();
-    test_sobel_kernel_unroll_V2();
-    test_sobel_SIMD_V3();
-    test_sobel_squareroot_lookup_V1();
-    test_sobel_separated_convolution_V4();
+    test_sobel_kernel_unroll_V1();
+    test_sobel_separated_convolution_V2();
+    test_sobel_simd_V3();
+    test_sobel_squareroot_lookup_V4();
 
     // Read/Write
     test_parse_ppm_header_correct_header();

@@ -15,13 +15,13 @@ void test_sobel_naive_V0(void) {
     sobel(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
     bool test_result = uint8_array_equal(expected, actual, 9);
-    ASSERT_TRUE("Sobel Naive Basic Test", test_result);
+    ASSERT_TRUE("Sobel Naive (V0) Basic Test", test_result);
     if (!test_result) {
         print_matrix_test_details(expected, actual, 9);
     }
 }
 
-void test_sobel_kernel_unroll_V2(void){
+void test_sobel_kernel_unroll_V1(void){
     uint8_t img [27] = {0, 8, 17, 19, 23, 26, 32, 33, 41,
                         50, 60, 72, 84, 91, 10, 20, 35, 37,
                         45, 40, 53, 72, 99, 20, 21, 23, 44};
@@ -38,13 +38,13 @@ void test_sobel_kernel_unroll_V2(void){
 
 
     bool test_result = uint8_array_equal(expected, actual, 9);
-    ASSERT_TRUE("Sobel V2 Basic Test", test_result);
+    ASSERT_TRUE("Sobel Kernel Unroll (V2) Basic Test", test_result);
     if (!test_result) {
         print_matrix_test_details(expected, actual, 9);
     }
 }
 
-void test_sobel_SIMD_V3(void) {
+void test_sobel_simd_V3(void) {
     uint8_t img [36] = {0, 8, 17, 19, 23, 26, 32, 33, 41,50, 60, 72,
                         84, 91, 10, 20, 35, 37,45, 40, 53,72, 99, 20,
                         21, 23, 44,158, 56, 218, 158,56,218, 158,56,218};
@@ -60,13 +60,13 @@ void test_sobel_SIMD_V3(void) {
     sobel_V3(img, 4, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
     bool test_result = uint8_array_equal(expected, actual, 12);
-    ASSERT_TRUE("Sobel V3 Basic Test", test_result);
+    ASSERT_TRUE("Sobel SIMD (V3) Basic Test", test_result);
     if (!test_result) {
         print_matrix_test_details(expected, actual, 12);
     }
 }
 
-void test_sobel_squareroot_lookup_V1(void) {
+void test_sobel_squareroot_lookup_V4(void) {
     uint8_t img [27] = {0, 8, 17, 19, 23, 26, 32, 33, 41,
                         50, 60, 72, 84, 91, 10, 20, 35, 37,
                         45, 40, 53, 72, 99, 20, 21, 23, 44};
@@ -78,17 +78,17 @@ void test_sobel_squareroot_lookup_V1(void) {
     uint8_t gray[9] = {0};
     uint8_t actual[9] = {0};
 
-    sobel_squareroot_lookup_V1(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
+    sobel_V4(img, 3, 3, 0.299f, 0.587f, 0.114f, gray, actual);
 
     bool test_result = uint8_array_equal(expected, actual, 9);
-    ASSERT_TRUE("Sobel V1 Basic Test", test_result);
+    ASSERT_TRUE("Sobel Squareroot Lookup Table (V4) Basic Test", test_result);
     if (!test_result) {
         print_matrix_test_details(expected, actual, 9);
     }
 
 }
 
-void test_sobel_separated_convolution_V4(void) {
+void test_sobel_separated_convolution_V2(void) {
     uint8_t img [27] = {0, 8, 17, 19, 23, 26, 32, 33, 41,
                         50, 60, 72, 84, 91, 10, 20, 35, 37,
                         45, 40, 53, 72, 99, 20, 21, 23, 44};
@@ -107,7 +107,7 @@ void test_sobel_separated_convolution_V4(void) {
     }*/
 
     bool test_result = uint8_array_equal(expected, actual, 9);
-    ASSERT_TRUE("Sobel V4 Basic Test", test_result);
+    ASSERT_TRUE("Sobel Separate Convolution (V2) Basic Test", test_result);
     if (!test_result) {
         print_matrix_test_details(expected, actual, 9);
     }

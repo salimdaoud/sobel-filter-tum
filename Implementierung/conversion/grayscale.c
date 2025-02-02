@@ -51,12 +51,15 @@ void img_to_grayscale_simd(const uint8_t* img, size_t width, size_t height,
                            float a, float b, float c, uint8_t* gray){
     size_t rgb_size = height * width * 3;
 
+    // Each coefficient is expanded by 2^15 (not 2^16 as we use signed integers to be able to use _mm_mulhrs_epi16),
+    // and rounded to int16 (add 0.5 for rounding). Cannot use shift because of float.
+    // Fixed point multiplication allows to work on 8 16 bit integers instead of 4 32 bit floats. Requires special
+    // handling of edge case where one coefficient is 1, as this would cause an overflow when shifting (multiplying
+    // the float values) otherwise.
     int16_t r_value_weight_fixed = (int16_t)(a * 32768.0 + 0.5);
     int16_t g_value_weight_fixed = (int16_t)(b * 32768.0 + 0.5);
     int16_t b_value_weight_fixed = (int16_t)(c * 32768.0 + 0.5);
 
-    // Each coefficient is expanded by 2^15 (not 2^16 as we use signed integers to be able to use _mm_mulhrs_epi16),
-    // and rounded to int16 (add 0.5 for rounding). Cannot use shift because of float.
     const __m128i r_coef_extended = _mm_set1_epi16(r_value_weight_fixed);
     const __m128i g_coef_extended = _mm_set1_epi16(g_value_weight_fixed);
     const __m128i b_coef_extended = _mm_set1_epi16(b_value_weight_fixed);
@@ -164,7 +167,7 @@ static __inline __m128i convert_rgb_to_gray_8_pixels(__m128i r_76543210, __m128i
     b_76543210 = _mm_slli_epi16(b_76543210, 6);
 
     // Use the special intrinsic _mm_mulhrs_epi16 that calculates round((r * r_coef) / 2^15).
-    // Calculate gray_value using fixed point multiplication and adding up the results.
+    // Calculate gray_76543210 using fixed point multiplication and adding up the results.
     __m128i gray_76543210 = _mm_add_epi16(_mm_add_epi16( _mm_mulhrs_epi16(r_76543210, r_coef_extended),
                                                             _mm_mulhrs_epi16(g_76543210, g_coef_extended)),
                                                             _mm_mulhrs_epi16(b_76543210, b_coef_extended));
@@ -175,6 +178,8 @@ static __inline __m128i convert_rgb_to_gray_8_pixels(__m128i r_76543210, __m128i
     return gray_76543210;
 }
 
+// Tested if compiler optimizations would be more effective with less shifts and without alignr. But Grayscaling
+// with 8 pixels was still faster.
 static __inline void extract_r_g_b_sorted_5_pixels(const __m128i r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0,
                                                    __m128i* r_43210,
                                                    __m128i* g_43210,
@@ -194,12 +199,12 @@ void img_to_grayscale_simd_5_pixels(const uint8_t* img, size_t width, size_t hei
     size_t index_rgb = 0;
     size_t index_gray = 0;
 
+    // Each coefficient is expanded by 2^15 (not 2^16 as we use signed integers to be able to use _mm_mulhrs_epi16),
+    // and rounded to int16 (add 0.5 for rounding). Cannot use shift because of float.
     int16_t r_value_weight_fixed = (int16_t)(a * 32768.0 + 0.5);
     int16_t g_value_weight_fixed = (int16_t)(b * 32768.0 + 0.5);
     int16_t b_value_weight_fixed = (int16_t)(c * 32768.0 + 0.5);
 
-    // Each coefficient is expanded by 2^15 (not 2^16 as we use signed integers to be able to use _mm_mulhrs_epi16),
-    // and rounded to int16 (add 0.5 for rounding). Cannot use shift because of float.
     const __m128i r_coef_extended = _mm_set_epi16(0, 0, 0,
                                                   r_value_weight_fixed, r_value_weight_fixed,
                                                   r_value_weight_fixed, r_value_weight_fixed, r_value_weight_fixed);
@@ -210,7 +215,7 @@ void img_to_grayscale_simd_5_pixels(const uint8_t* img, size_t width, size_t hei
                                                   b_value_weight_fixed,b_value_weight_fixed,b_value_weight_fixed,
                                                   b_value_weight_fixed,b_value_weight_fixed);
 
-    //Process one row per iteration.
+    // Process one row per iteration.
     for (; index_rgb < simd_size; index_rgb += 15, index_gray += 5) {
 
         __m128i r_43210;
@@ -265,9 +270,8 @@ static __inline void extract_r_g_b_sorted_5_pixels(const __m128i r_5_bgr_4_bgr_3
                                                    __m128i* g_43210,
                                                    __m128i* b_43210){
 
-    // Shuffle mask for gathering 4 Red Values, 4 Green Values and 4 Blue Values
-    // (also set last 4 elements to duplication of first 4 elements).
-    const __m128i shuffle_mask = _mm_set_epi8(0,                                // filler
+    // Shuffle mask for gathering 5 Red Values, 5 Green Values and 5 Blue Values (+ 1 filler)
+    const __m128i shuffle_mask = _mm_set_epi8(15,                                // filler
                                               14, 11,8,5,2,  // blue
                                               13, 10,7,4,1, //green
                                               12, 9,6,3,0); //red
@@ -276,17 +280,19 @@ static __inline void extract_r_g_b_sorted_5_pixels(const __m128i r_5_bgr_4_bgr_3
     // lies in reversed order due to Little-Endianness.
     __m128i r_0_b_43210_g_43210_r_43210 = _mm_shuffle_epi8(r_5_bgr_4_bgr_3_bgr_2_bgr_1_bgr_0, shuffle_mask);
 
+    // RED: Put 5 Blue Values in lower part.
     *r_43210 = _mm_unpacklo_epi8(r_0_b_43210_g_43210_r_43210, _mm_setzero_si128());
 
+    // GREEN: Put 5 Blue Values in lower part.
     __m128i unclean_colour_43210 = _mm_srli_si128(r_0_b_43210_g_43210_r_43210, 5);
     *g_43210 = _mm_unpacklo_epi8(unclean_colour_43210, _mm_setzero_si128());
 
-    // BLUE: Put 8 Blue Values in lower part.
+    // BLUE: Put 5 Blue Values in lower part.
     unclean_colour_43210 = _mm_srli_si128(unclean_colour_43210, 5);
     *b_43210 = _mm_unpacklo_epi8(unclean_colour_43210, _mm_setzero_si128());
 }
 
-// Calculate 8 Grayscale elements from 8 RGB Values.
+// Calculate 5 Grayscale elements from 5 RGB Values.
 static __inline __m128i convert_rgb_to_gray_5_pixels(__m128i r_43210, __m128i g_43210, __m128i b_43210,
                                                      const __m128i r_coef_extended,
                                                      const __m128i g_coef_extended,
@@ -299,7 +305,7 @@ static __inline __m128i convert_rgb_to_gray_5_pixels(__m128i r_43210, __m128i g_
     b_43210 = _mm_slli_epi16(b_43210, 6);
 
     // Use the special intrinsic _mm_mulhrs_epi16 that calculates round((r * r_coef) / 2^15).
-    // Calculate gray_value using fixed point multiplication and adding up the results.
+    // Calculate gray_43210 using fixed point multiplication and adding up the results.
     __m128i gray_43210 = _mm_add_epi64(_mm_add_epi64(_mm_mulhrs_epi16(r_43210, r_coef_extended),
                                                      _mm_mulhrs_epi16(g_43210, g_coef_extended)),
                                        _mm_mulhrs_epi16(b_43210, b_coef_extended));

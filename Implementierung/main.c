@@ -71,33 +71,17 @@ int main(int argc, char* argv[]) {
             }
             break;
         case 3:
-            if (width >= 4) {
-                printf("SIMD Sobel implementation used.\n");
-                if (args.benchmark_flag){
-                    start_time_measurement();
-                }
-                for (size_t i = 0; i < args.repetitions; i++) {
-                    sobel_V3(rgbData, width, height, r_value_weighted, g_value_weighted,
-                             b_value_weighted, tmp, result);
-                }
-                if (args.benchmark_flag){
-                    end_time_measurement("Sobel SIMD implementation");
-                }
-            } else {
-                printf("Image pixel width is too small. Using SIMD does not make sense.\n"
-                        "Standard Sobel implementation used.\n");
-                if (args.benchmark_flag){
-                    start_time_measurement();
-                }
-                for (size_t i = 0; i < args.repetitions; i++) {
-                    sobel(rgbData, width, height, r_value_weighted, g_value_weighted,
-                          b_value_weighted, tmp, result);
-                }
-                if (args.benchmark_flag){
-                    end_time_measurement("Naive Sobel Implementation");
-                }
-                break;
-                }
+            printf("SIMD Sobel implementation used.\n");
+            if (args.benchmark_flag){
+                start_time_measurement();
+            }
+            for (size_t i = 0; i < args.repetitions; i++) {
+                sobel_V3(rgbData, width, height, r_value_weighted, g_value_weighted,
+                         b_value_weighted, tmp, result);
+            }
+            if (args.benchmark_flag){
+                end_time_measurement("Sobel SIMD implementation");
+            }
             break;
         case 4:
             printf("Squareroot lookup Sobel implementation used.\n");
@@ -105,7 +89,7 @@ int main(int argc, char* argv[]) {
                 start_time_measurement();
             }
             for (size_t i = 0; i < args.repetitions; i++) {
-                sobel_squareroot_lookup_V1(rgbData, width, height, r_value_weighted, g_value_weighted,
+                sobel_V4(rgbData, width, height, r_value_weighted, g_value_weighted,
                                            b_value_weighted, tmp, result);
             }
             if (args.benchmark_flag){
