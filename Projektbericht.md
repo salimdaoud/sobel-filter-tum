@@ -23,16 +23,18 @@ D = \frac{a \cdot R + b \cdot G + c \cdot B}{a + b + c}
 $$
 
 #### 2.1.2 SIMD-Implementierung
-Die Methode nutzt SIMD-Befehle (Single Instruction Multiple Data) um 4 Pixel gleichzeitig zu verarbeiten und dadurch die Rechenzeit zu optimieren.
-Die zu grunde liegende Formel ist dieselbe wie bei der Referenzimplementierung.
-Pixel, die nicht durch 4 teilbar sind, werden einzeln in einer zusätzlichen Schleife verarbeitet.
+Die Methode nutzt SIMD-Befehle (Single Instruction Multiple Data) um 8 Pixel gleichzeitig zu verarbeiten. Dazu werden
+zunächst 2 * 16 Byte an RGB-Daten geladen, diese nach Farben sortiert, auf 8 Werte beschnitten und in einzelne Register
+isoliert. Mittels Fix-Komma-Berechnung werden die Koeffizienten auf die Farbwerte angewandt und die Summe der 3 Register
+als Grauwert gespeichert.
 
 #### 2.1.3 Implementierung mit Bit-shift
-Wir haben versucht mithilfe von Bit-shifts die Effizienz der Berechnungen zu verbessern.
-Dabei haben wir festgestellt, dass die Multiplikation der Pixelwerte mit den idealen Koeffizienten durch eine Approximation mittels Bit-shifts dargestellt werden kann.
+Statt der präzisen Werte wird 0.25 (0.299) für Rot, 0.5 (0.587) für Grün und 0.25 (0.144) für Blau verwendet, die mit
+simplen Shifts angewandt werden können. Eine einfache Implementierung, die je nach Anwendungszweck ordentliche
+Ergebnisse liefert.
 
 ### 2.2 Sobel-Filter
-#### 2.2.1 Referenzimplementierung (naiv)
+#### 2.2.1 Referenzimplementierung (naiv) - V0
 Der Sobel-Filter wird in mehreren Stufen angewandt.
 Zunächst wird das Graustufenbild Q getrennt nach vertikalen (v) und nach horizontalen (h) Kanten gefiltert: 
 $$
@@ -51,28 +53,29 @@ $$
 Q'_{(x, y)} = \text{clamp}_{0}^{255} \left(\sqrt{\left(Q^v_{(x, y)} \right)^2 + \left(Q^h_{(x, y)} \right)^2} \right) 
 $$
 
-#### 2.2.2 Implementierung mit LUT
-Diese Implementierung orientiert sich wieder an der naiven Implementierung des Sobel-Filters.
-Ausnahme dabei ist, dass hierbei eine Lookup-Tabelle genutzt wird, um die Quadratwurzel zu berechnen, anstatt die Wurzelfunktion aus der C-Bibliothek zu nutzen.
-Alle Quadratwurzeln mit den Werten 0 bis 254 wurden vorab berechnet und in einer Lookup-Tabelle gespeichert.
-An dieser Stelle kann ebenso erwähnt werden, dass eine weitere Form der Quadratwurzel implementiert wurde, diese approximate das Ergebnis und nutzt nur simple mathematische Operationen.
-
-#### 2.2.3 Implementierung mit kernel unroll
+#### 2.2.2 Implementierung mit Kernel Unroll - V1
 Wir haben festgestellt, dass die vertikale Matrix eine Spalte mit Nullen und die horizontale Matrix eine Zeile mit Nullen enthält.
 Daher können wir uns bei der Multiplikation jeder Matrix mit den Bildpixeln die Berechnung dieser Nullen sparen.
 Außerdem konnten wir erkennen, dass die verbleibenden Werte beider Matrizen auf die Konstanten 1, -1, 2 und -2 beschränkt sind.
 Daher haben wir die Iterationen über beide Matrizen optimiert, indem wir diese fixen Werte direkt genutzt haben.
 
-#### 2.2.4 SIMD-Implementierung
-Die Methode basiert auf dem vorigen Algorithmus mit kernel unroll und nutzt zusätzlich SIMD-Instruktionen zur Berechnung.
-Mithilfe von SIMD werden 8 Pixel gleichzeitig verarbeitet und somit die größten Zeitersparnisse beim Anwenden des Sobel-Filters erzielt.
-Falls die Anzahl der Pixel nicht durch 8 teilbar ist, wird die letzte Zeile separat ohne Verwendung von SIMD-Instruktionen verarbeitet.
-
-#### 2.2.5 Implementierung mit separierten Filtern
+#### 2.2.3 Implementierung mit separierten Filtern - V2
 Hierbei handelt es sich um eine Implementierung des Sobel-Filters mithilfe von separierten Filtern.
 Dabei wird in die Anzahl der nötigen Operationen bei einem 2D-Bildfilter reduziert, indem der Filter in zwei 1D-Filter aufgeteilt wird.
 So kann von MxN Operationen auf M+N Operationen reduziert werden.
 Dies ist hier ein wenig langsamer bei unserem Beispiel, da wir nur 3x3 Filter verwenden, der Vorteil wird bei größeren Filtern deutlicher.
+
+#### 2.2.4 SIMD-Implementierung - V3
+Die Methode basiert auf dem obigen Algorithmus mit kernel unroll und nutzt zusätzlich SIMD-Instruktionen zur Berechnung.
+Mithilfe von SIMD werden 8 Pixel gleichzeitig verarbeitet und somit die größten Zeitersparnisse beim Anwenden des Sobel-Filters erzielt.
+Überlappungen in nicht zur Bildzeile gehörende Speicherbereiche wurden mittels 0-Masken ignoriert.
+
+#### 2.2.5 Implementierung mit LUT - V4
+Diese Implementierung basiert wieder auf der naiven Implementierung des Sobel-Filters.
+Ausnahme dabei ist, dass hierbei eine Lookup-Tabelle genutzt wird, um die Quadratwurzel zu berechnen, anstatt die Wurzelfunktion aus der C-Bibliothek zu nutzen.
+Alle Quadratwurzeln mit den Werten 0 bis 254 wurden vorab berechnet und in einer Lookup-Tabelle gespeichert.
+An dieser Stelle kann ebenso erwähnt werden, dass eine weitere Form der Quadratwurzel implementiert wurde, diese approximate das Ergebnis und nutzt nur simple mathematische Operationen.
+Beide Versionen lieferten enorme Performanzeinbußen und wurden in Bezug auf die Optimierung nicht mehr verwendet.
 
 ## 3 Performanzmessungen
 ### 3.1 Messumgebung
@@ -85,16 +88,17 @@ Die Berechnungen wurden mit Eingabegrößen von 640×426 bis 5184×3456 Pixeln j
 ### 3.3 Ergebnisse
 <img src="Sobel_Benchmark.png" alt="Sobel Filter Result" width="512">
 
-In unserem Testrahmen mit der Referenzimplementierung als Standard, konnten wir feststellen, dass die SIMD-Implementierung, wie erwartet, die schnellste ist, vor allem bei größeren Bildern.
+In unserem Testrahmen mit der Referenzimplementierung als Standard, konnten wir feststellen, dass die SIMD-Implementierung, wie erwartet, für relevante Bildgrößen die schnellste ist.
 Die spezielleren Versuche den Algorithmus zu verbessern, haben zu eher kleineren Verbesserung der Laufzeit geführt (zumindest bei derzeitiger Methodik).
 Lookup-Tabellen hingegen haben unsere Laufzeit deutlich verschlechtert.
 
 ## 4 Anteile der einzelnen Projektmitglieder
 ### 4.1 Tobias Langer
-- Refactoring und generelle Code Verbesserungen
+- Refactoring und generelle Code-Verbesserungen
 - Implementierung von Sobel mit separierten Filtern
 - Implementierung von Graustufen-Konvertierung und Sobel-Filter mit SIMD mit 8 Pixeln
 - Erstellen von Grafiken für die Präsentation
+- Strukturierung der Tests in Form eines simplen Frameworks
 
 ### 4.2 Luca Tänzler
 - Erste Zeitmessung für Sobel-Filter und Graustufen-Konvertierung

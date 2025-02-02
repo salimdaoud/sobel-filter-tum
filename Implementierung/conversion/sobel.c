@@ -367,6 +367,14 @@ void sobel_V4( const uint8_t* img, size_t width, size_t height,
     }
 }
 
+// idea from: https://www.youtube.com/watch?v=SiJpkucGa1o
+// in-depth understanding from:
+// "Digitale Bildverarbeitung - Eine Einführung mit Java und ImageJ",
+// Wilhelm Burger, Mark James Burge
+// 2006
+// ISBN: ISBN-10 3-540-30940-3
+// pages: 120 - 123
+
 // Separate Convolution
 void sobel_V2(const uint8_t* img, size_t width, size_t height,
               float a, float b, float c, void* tmp, uint8_t* result) {
