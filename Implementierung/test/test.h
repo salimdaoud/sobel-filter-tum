@@ -4,6 +4,9 @@
 #include "../conversion/grayscale.h"
 #include "../conversion/sobel.h"
 
+// loosely based on: https://www.reddit.com/r/C_Programming/comments/151bc38/comment/js7oxgt/?utm_source=share&utm
+// _medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+
 extern const char* function_name;
 extern const char* file;
 extern int global_total_tests;
