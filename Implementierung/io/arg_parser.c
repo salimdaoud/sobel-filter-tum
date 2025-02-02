@@ -6,11 +6,11 @@ void print_help() {
            "%-7s program <inputfile> [options]\n", "");
     printf("\nOptions:\n");
     printf("%-7s [%s] <%s> %s\n", "", "-V", "Zahl", " -  Specify the implementation version (default: 0)");
-    printf("%-7s [%s]=<%s> %s\n", "", "-B", "Zahl", " -  Measure the implementation version runtime with "
+    printf("%-7s [%s]<%s> %s\n", "", "-B", "Zahl", " -  Measure the implementation version runtime with "
                                                     "optional repetitions (default: 1). No space between option"
                                                     " identifier and argument allowed.");
     printf("%-7s [%s] <%s> %-s\n", "", "-o", "Dateiname", " -  Specify output file");
-    printf("%-7s [%s] <%s> <%s> <%s> %s\n", "", "--rgb_coeffs", "a", "b", "c", " -  Set coefficients a, b, and c "
+    printf("%-7s [%s] <%s> <%s> <%s> %s\n", "", "--coeffs", "a", "b", "c", " -  Set coefficients a, b, and c "
                                                                                "for Grayscale conversion");
     printf("%-7s [%s] %s\n", "", "-t", " -  Run the tests");
     printf("%-7s [%s] %s\n", "", "-h/--help", " -  Show this help message and exit");
@@ -41,7 +41,7 @@ int parse_arguments (int argc, char *argv[], struct ParsedArgs *args) {
 
     static struct option long_options[] = {
     {"help",    no_argument,       0, 'h'},
-    {"rgb_coeffs",  required_argument, 0,  'c' },
+    {"coeffs",  required_argument, 0,  'c' },
     {0, 0, 0, 0}  // Terminating entry
     };
 
@@ -111,7 +111,7 @@ int parse_arguments (int argc, char *argv[], struct ParsedArgs *args) {
             case 'c':
                 for (int8_t i = 0; i < 3; i++) {
                     if (optind + 1 >= argc) {
-                        fprintf(stderr, "--rgb_coeffs requires 3 numeric values.\n");
+                        fprintf(stderr, "--coeffs requires 3 numeric values.\n");
                         exit(EXIT_FAILURE);
                     }
                     errno = 0;
