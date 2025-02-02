@@ -164,8 +164,8 @@ void write_pgm_file(const char* filename, const uint8_t* sobel_data, int width, 
     // Open the file
     int file_descriptor = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (file_descriptor < 0) {
-        fprintf(stderr, "Error opening file. Check if file exists.\n");
-        return;
+        fprintf(stderr, "Error opening specified output file '%s'. Check if file exists.\n", filename);
+        goto cleanup;
     }
 
     // Write the header
