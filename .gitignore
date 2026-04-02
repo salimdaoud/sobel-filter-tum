@@ -1,0 +1,12 @@
+# VS Code settings
+.vscode/
+
+# Image/binary test files
+sample_images.7z
+Sobel_Benchmark.png
+
+# Git attributes (optional, keep if you want)
+.gitattributes
+
+
+
